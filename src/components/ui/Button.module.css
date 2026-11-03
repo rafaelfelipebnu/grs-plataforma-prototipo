@@ -1,0 +1,95 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-8);
+  min-height: 36px;
+  padding: 7px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--r-3);
+  font-size: var(--fs-body);
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+}
+
+.primary {
+  background: var(--sds-primary);
+  color: var(--sds-white);
+}
+.primary:hover:not(:disabled) {
+  background: var(--sds-primary-hover);
+}
+.primary:disabled {
+  background: var(--sds-disabled);
+}
+
+.secondary {
+  background: var(--sds-secondary);
+  color: var(--sds-white);
+}
+.secondary:hover:not(:disabled) {
+  background: var(--sds-secondary-hover);
+}
+.secondary:disabled {
+  background: var(--sds-border-strong);
+}
+
+.link {
+  background: transparent;
+  color: var(--sds-primary);
+  padding-inline: var(--sp-8);
+}
+.link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+.link:disabled {
+  color: var(--sds-disabled);
+}
+
+.danger {
+  background: var(--sds-red);
+  color: var(--sds-white);
+}
+.danger:hover:not(:disabled) {
+  background: var(--sds-red-text);
+}
+
+.small {
+  min-height: 28px;
+  padding: 3px 10px;
+  font-size: 13px;
+}
+
+.block {
+  width: 100%;
+}
+
+.iconButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--r-3);
+  background: transparent;
+  color: var(--sds-text-support);
+  cursor: pointer;
+  font-size: 16px;
+}
+.iconButton:hover {
+  background: var(--sds-hover-bg);
+  color: var(--sds-text);
+}
+.iconButtonBadge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+}

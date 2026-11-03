@@ -1,0 +1,69 @@
+import type {
+  AccessPassage,
+  DashboardLayout,
+  AppNotification,
+  Asset,
+  AuditEntry,
+  Classification,
+  Company,
+  Connector,
+  Contract,
+  DataPoint,
+  DemoUser,
+  Device,
+  DeviceHealth,
+  Location,
+  OperationalEvent,
+  OrgLocationMapping,
+  OrgUnit,
+  Person,
+} from '@/domain';
+
+/**
+ * Banco simulado da demonstração. Agrupa as coleções por domínio proprietário
+ * apenas por organização do código; o acesso sempre passa pelos serviços.
+ */
+export interface DemoDatabase {
+  meta: {
+    schemaVersion: number;
+    seededAt: string;
+  };
+  // Plataforma
+  company: Company;
+  contract: Contract;
+  users: DemoUser[];
+  auditLog: AuditEntry[];
+  notifications: AppNotification[];
+  // Fonte integrada: Controle de Acesso (simulado)
+  people: Person[];
+  orgUnits: OrgUnit[];
+  orgLocationMappings: OrgLocationMapping[];
+  // Central de Ativos e Ambientes
+  locations: Location[];
+  classifications: Classification[];
+  assets: Asset[];
+  devices: Device[];
+  // Monitor de Infraestrutura
+  connectors: Connector[];
+  deviceHealth: DeviceHealth[];
+  dataPoints: DataPoint[];
+  // Feed de eventos (Security Hub e fontes)
+  events: OperationalEvent[];
+  // Fonte integrada: passagens do Controle de Acesso (simulado)
+  accessPassages: AccessPassage[];
+  // Security Hub: painéis
+  dashboards: {
+    /** Layout padrão definido pelo cliente (administrador). */
+    clientDefault: DashboardLayout;
+    /** Painéis personalizados por usuário. Ausente = usa o padrão do cliente. */
+    personal: Record<string, DashboardLayout>;
+  };
+  // Ferramenta do facilitador
+  demoSettings: {
+    /** Gera passagens de acesso simuladas periodicamente. */
+    liveSimulation: boolean;
+  };
+}
+
+/** Incrementar quando o formato mudar: dados persistidos antigos são descartados. */
+export const DEMO_SCHEMA_VERSION = 2;

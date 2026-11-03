@@ -1,0 +1,107 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 1px 8px;
+  border: 1px solid;
+  border-radius: 999px;
+  font-size: var(--fs-helper);
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.red {
+  background: var(--sds-red-tint);
+  border-color: var(--sds-red);
+  color: var(--sds-red-text);
+}
+.orange {
+  background: var(--sds-orange-tint);
+  border-color: var(--sds-orange);
+  color: var(--sds-orange-text);
+}
+.yellow {
+  background: var(--sds-yellow-tint);
+  border-color: var(--sds-yellow);
+  color: var(--sds-yellow-text);
+}
+.green {
+  background: var(--sds-green-tint);
+  border-color: var(--sds-green);
+  color: var(--sds-green-text);
+}
+.blue {
+  background: var(--sds-blue-tint);
+  border-color: var(--sds-blue);
+  color: var(--sds-blue-text);
+}
+.gray {
+  background: var(--sds-gray-tint);
+  border-color: var(--sds-border-strong);
+  color: var(--sds-text-support);
+}
+
+.number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--sds-red);
+  color: var(--sds-white);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  max-width: 320px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid var(--sds-border-strong);
+  border-radius: var(--r-3);
+  background: var(--sds-white);
+  font-size: var(--fs-helper);
+}
+.chip strong {
+  font-weight: 700;
+}
+.chipText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chipRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--sds-text-support);
+  cursor: pointer;
+}
+.chipRemove:hover {
+  background: var(--sds-hover-bg);
+}
+
+.demoTag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0 6px;
+  border-radius: var(--r-2);
+  background: #fff4d6;
+  color: #7a5c00;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}

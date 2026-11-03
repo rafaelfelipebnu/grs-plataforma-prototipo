@@ -1,0 +1,188 @@
+/* ── Stats card (totalizador SDS) ──────────────────────── */
+.stats {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-12);
+  min-width: 0;
+  padding: var(--sp-12) var(--sp-16);
+  border: 1px solid var(--sds-border);
+  border-radius: var(--r-3);
+  background: var(--sds-white);
+  color: var(--sds-text);
+  text-align: left;
+  text-decoration: none;
+}
+a.stats:hover,
+button.stats:hover {
+  border-color: var(--sds-primary);
+  box-shadow: var(--dp02);
+  text-decoration: none;
+}
+button.stats {
+  cursor: pointer;
+  font: inherit;
+  width: 100%;
+}
+.statsIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-4);
+  background: var(--sds-gray-tint);
+  color: var(--sds-text-support);
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.statsText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.statsTitle {
+  font-size: var(--fs-helper);
+  color: var(--sds-text-support);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.statsValue {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.tone-red .statsIcon {
+  background: var(--sds-red-tint);
+  color: var(--sds-red);
+}
+.tone-orange .statsIcon {
+  background: var(--sds-orange-tint);
+  color: var(--sds-orange-text);
+}
+.tone-yellow .statsIcon {
+  background: var(--sds-yellow-tint);
+  color: var(--sds-yellow-text);
+}
+.tone-green .statsIcon {
+  background: var(--sds-green-tint);
+  color: var(--sds-green);
+}
+.tone-blue .statsIcon {
+  background: var(--sds-blue-tint);
+  color: var(--sds-blue-text);
+}
+
+/* ── Tabela ────────────────────────────────────────────── */
+.tableWrap {
+  overflow-x: auto;
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.table th {
+  padding: var(--sp-8) var(--sp-12);
+  border-bottom: 1px solid var(--sds-border);
+  background: var(--sds-page-bg);
+  font-size: var(--fs-helper);
+  font-weight: 600;
+  color: var(--sds-text-support);
+  text-align: left;
+  white-space: nowrap;
+}
+.table td {
+  padding: var(--sp-8) var(--sp-12);
+  border-bottom: 1px solid var(--sds-border);
+  vertical-align: middle;
+}
+.table tbody tr:nth-child(even) td {
+  background: #fafbfb;
+}
+.table tbody tr:hover td {
+  background: var(--sds-hover-bg);
+}
+.table tbody tr.selected td {
+  background: var(--sds-primary-tint);
+}
+.checkCell {
+  width: 36px;
+}
+.checkCell input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--sds-primary);
+}
+.tableHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-8);
+  padding: var(--sp-12) var(--sp-16);
+  border-bottom: 1px solid var(--sds-border);
+}
+.tableHeadingEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-8);
+  margin-left: auto;
+}
+
+/* ── Paginador ─────────────────────────────────────────── */
+.paginator {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  padding: var(--sp-12) var(--sp-16);
+  font-size: 13px;
+  color: var(--sds-text-support);
+}
+.pages {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.pageButton {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--sds-border-strong);
+  border-radius: var(--r-3);
+  background: var(--sds-white);
+  cursor: pointer;
+}
+.pageButton:disabled {
+  color: var(--sds-disabled);
+  cursor: not-allowed;
+}
+.pageButtonActive {
+  border-color: var(--sds-primary);
+  background: var(--sds-primary);
+  color: var(--sds-white);
+}
+
+/* ── Filtros ───────────────────────────────────────────── */
+.filterChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  justify-content: flex-end;
+}
+.filterGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--sp-16);
+}
+.filterFieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.filterFieldset legend {
+  margin-bottom: var(--sp-4);
+}

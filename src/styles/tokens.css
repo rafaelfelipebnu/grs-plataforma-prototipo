@@ -1,0 +1,112 @@
+/*
+ * Tokens do SDS — Senior Design System (Web).
+ * Fonte: guia SDS consolidado (30/09/2026). Valores marcados "obs." são aproximados.
+ */
+:root {
+  /* Cores primárias */
+  --sds-primary: #428bca;
+  --sds-primary-hover: #3276b1;
+  --sds-primary-tint: #eaf2fa;
+  --sds-secondary: #7892a1;
+  --sds-secondary-hover: #637d8c;
+
+  /* Cinzas */
+  --sds-white: #ffffff;
+  --sds-text: #333333;
+  --sds-text-muted: #999999;
+  --sds-text-support: #697882;
+  --sds-border: #e5eaea;
+  --sds-border-strong: #d8d8d8;
+  --sds-disabled: #cccccc;
+  --sds-page-bg: #f5f5f5; /* obs. */
+  --sds-hover-bg: #f2f6f6;
+
+  /* Criticidade — protocolo de Manchester */
+  --sds-red: #c13018;
+  --sds-orange: #f8931f;
+  --sds-yellow: #fcbf10;
+  --sds-green: #0c9348;
+  --sds-blue: #428bca;
+  --sds-red-tint: #fbeae7;
+  --sds-orange-tint: #fef3e6;
+  --sds-yellow-tint: #fef8e5;
+  --sds-green-tint: #e6f4ec;
+  --sds-blue-tint: #eaf2fa;
+  --sds-gray-tint: #f0f2f3;
+  /* Variações escuras para texto sobre fundos tintados (contraste AA) */
+  --sds-red-text: #a32813;
+  --sds-orange-text: #9a5300;
+  --sds-yellow-text: #7a5c00;
+  --sds-green-text: #0a7a3c;
+  --sds-blue-text: #2a6496;
+
+  /* Marca */
+  --sds-brand: #008269;
+  --sds-brand-dark: #006b56;
+
+  /* Menu lateral (obs. cinza-grafite) */
+  --shell-sidebar-bg: #2f3a40;
+  --shell-sidebar-bg-hover: #3b484f;
+  --shell-sidebar-active: #435159;
+  --shell-sidebar-text: #d6dde1;
+  --shell-sidebar-muted: #93a3ac;
+
+  /* Paleta Senior X (gráficos/totalizadores sem criticidade) */
+  --sx-1: #ade500;
+  --sx-2: #67acbc;
+  --sx-3: #008080;
+  --sx-4: #400753;
+  --sx-5: #50201f;
+  --sx-6: #063951;
+  --sx-7: #f45b5b;
+  --sx-8: #f5a319;
+  --sx-stats-1: #6da300;
+
+  /* Espaçamento */
+  --sp-4: 4px;
+  --sp-8: 8px;
+  --sp-12: 12px;
+  --sp-16: 16px;
+  --sp-24: 24px;
+  --sp-32: 32px;
+  --sp-40: 40px;
+  --sp-48: 48px;
+
+  /* Raio */
+  --r-2: 2px;
+  --r-3: 3px;
+  --r-4: 4px;
+  --r-6: 6px;
+  --r-10: 10px;
+  --r-15: 15px;
+
+  /* Elevação */
+  --dp01: 0 1px 3px rgba(0, 0, 0, 0.2), 0 2px 1px rgba(0, 0, 0, 0.12), 0 1px 1px rgba(0, 0, 0, 0.14);
+  --dp02: 0 1px 5px rgba(0, 0, 0, 0.2), 0 3px 1px rgba(0, 0, 0, 0.12), 0 2px 2px rgba(0, 0, 0, 0.14);
+  --dp04: 0 2px 4px rgba(0, 0, 0, 0.2), 0 1px 10px rgba(0, 0, 0, 0.12), 0 4px 5px rgba(0, 0, 0, 0.14);
+  --dp08: 0 5px 5px rgba(0, 0, 0, 0.2), 0 3px 14px rgba(0, 0, 0, 0.12), 0 8px 10px rgba(0, 0, 0, 0.14);
+  --dp16: 0 8px 10px rgba(0, 0, 0, 0.2), 0 6px 30px rgba(0, 0, 0, 0.12), 0 16px 24px rgba(0, 0, 0, 0.14);
+  --dp24: 0 11px 15px rgba(0, 0, 0, 0.2), 0 9px 46px rgba(0, 0, 0, 0.12), 0 24px 38px rgba(0, 0, 0, 0.14);
+
+  /* Tipografia */
+  --font-web: 'Open Sans', system-ui, sans-serif;
+  --font-m-title: 'Inter', 'Open Sans', sans-serif;
+  --fs-page-title: 22px;
+  --fs-panel-title: 16px;
+  --fs-body: 14px;
+  --fs-helper: 12px;
+
+  /* Foco acessível */
+  --focus-ring: 0 0 0 3px rgba(66, 139, 202, 0.45);
+
+  /* Layout */
+  --shell-sidebar-width: 264px;
+  --shell-sidebar-collapsed: 56px;
+  --shell-topbar-height: 56px;
+  --shell-demo-bar-height: 28px;
+  --z-sidebar: 30;
+  --z-topbar: 40;
+  --z-popover: 60;
+  --z-overlay: 80;
+  --z-toast: 100;
+}
