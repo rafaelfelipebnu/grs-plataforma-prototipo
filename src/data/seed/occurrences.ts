@@ -117,7 +117,7 @@ export function createDemoOccurrences(at: (minutesAgo: number) => ISODateString)
     },
     {
       ...base,
-      id: 'oc-008', code: 'OC-0008', typeId: 'tp-desvio', locationId: 'loc-joi-ind', assetId: 'a-ext12',
+      id: 'oc-008', code: 'OC-0008', typeId: 'tp-desvio', locationId: 'loc-joi-linha1', assetId: 'a-ext12',
       description: 'Extintor da Linha 1 obstruído por paletes durante a auditoria de segurança; outros pontos com sinalização apagada.',
       occurredAt: at(5 * 1440), createdAt: at(5 * 1440 - 20), priority: 'alta', origin: 'usuario', registeredByUserId: 'u-seg',
       status: 'em-andamento', firstProceedingAt: at(5 * 1440 - 60),

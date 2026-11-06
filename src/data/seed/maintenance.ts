@@ -53,7 +53,7 @@ export function createDemoMaintenance(at: (minutesAgo: number) => ISODateString,
     {
       id: 'sol-004', code: 'SOL-0004', title: 'Inspeção do gerador após queda de energia',
       description: 'Gerador assumiu a carga por 40 minutos; verificar nível de óleo, filtros e registros de partida.',
-      locationId: 'loc-joi-ext', assetId: 'a-ger002', perceivedPriority: 'media', origin: 'painel-ativo',
+      locationId: 'loc-joi-maquinas', assetId: 'a-ger002', perceivedPriority: 'media', origin: 'painel-ativo',
       requesterUserId: 'u-seg', createdAt: at(3 * 1440), status: 'convertida', triageUserId: 'u-man', definedPriority: 'media',
       workOrderId: 'os-002', cancelledWorkOrderIds: [],
       history: [
@@ -109,7 +109,7 @@ export function createDemoMaintenance(at: (minutesAgo: number) => ISODateString,
     {
       id: 'os-002', code: 'OS-0002', title: 'Inspeção do gerador após queda de energia',
       description: 'Gerador assumiu a carga por 40 minutos; verificar nível de óleo, filtros e registros de partida.',
-      locationId: 'loc-joi-ext', assetId: 'a-ger002', requestIds: ['sol-004'], priority: 'media',
+      locationId: 'loc-joi-maquinas', assetId: 'a-ger002', requestIds: ['sol-004'], priority: 'media',
       createdAt: at(3 * 1440 - 40), createdByUserId: 'u-man', status: 'em-execucao', technicianUserId: 'u-tec', plannedDate: day(-1),
       executions: [
         {

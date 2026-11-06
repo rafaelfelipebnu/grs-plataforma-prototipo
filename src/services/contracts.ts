@@ -1135,6 +1135,8 @@ export interface ConclusionCheck {
   /** Condições do tipo verificáveis antes da conclusão atendidas. */
   typeMet: boolean;
   requiresApproval: boolean;
+  /** Condições do tipo que impedem concluir agora (plano, reinspeção). */
+  typeBlocking: boolean;
   /** Avisos que não bloqueiam (ex.: reinspeção pendente em tipo que não a exige — DP-09). */
   notices: string[];
 }

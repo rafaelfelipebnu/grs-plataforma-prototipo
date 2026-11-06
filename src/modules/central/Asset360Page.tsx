@@ -299,8 +299,26 @@ function DevicesSection({ s }: { s: Asset360 }) {
 }
 
 /** Estado de cada módulo para este ativo — sem inventar dados de módulos ainda não implementados. */
+/** Consulta (somente leitura) do que Rotinas e Ocorrências registram para o ativo — os módulos continuam donos dos dados. */
+function useModuleUsage(s: Asset360) {
+  const access = useAccess();
+  const services = useServices();
+  return useServiceQuery(async () => {
+    const out: { points: { name: string; plan: string }[]; openOccurrences: number; occurrenceSearch: string } = { points: [], openOccurrences: 0, occurrenceSearch: s.asset.tag };
+    if (isModuleAvailable(access, 'rotinas')) {
+      const catalog = await services.routines.catalog(access);
+      out.points = catalog.flatMap((c) => c.points.filter((p) => p.assetId === s.asset.id).map((p) => ({ name: p.name, plan: c.plan.name })));
+    }
+    if (isModuleAvailable(access, 'ocorrencias')) {
+      out.openOccurrences = (await services.occurrences.list(access, { search: s.asset.tag, status: 'abertas', pageSize: 1 })).total;
+    }
+    return out;
+  }, [s.asset.id, access]);
+}
+
 function ModulesSection({ s }: { s: Asset360 }) {
   const access = useAccess();
+  const usage = useModuleUsage(s).data;
   const others = MODULE_IDS.filter((m) => m !== 'central');
   const describe = (moduleId: ModuleId): { tone: 'green' | 'gray' | 'yellow'; status: string; text: string } => {
     const state = moduleAccess(access, moduleId);
@@ -309,7 +327,7 @@ function ModulesSection({ s }: { s: Asset360 }) {
     if (state === 'no-permission') return { tone: 'gray', status: 'Sem permissão', text: 'Seu perfil não acessa este módulo.' };
     if (moduleId === 'security-hub') {
       const sec = s.events.filter((e) => e.securityRelevant);
-      return { tone: 'green', status: 'Em uso', text: `${sec.length} evento(s) relevante(s) para segurança envolvendo este ativo.` };
+      return { tone: 'green', status: sec.length ? 'Em uso' : 'Contratado', text: `${sec.length} evento(s) relevante(s) para segurança envolvendo este ativo.` };
     }
     if (moduleId === 'monitor') {
       return {
@@ -317,6 +335,20 @@ function ModulesSection({ s }: { s: Asset360 }) {
         status: 'Contratado',
         text: `${s.devices.length} dispositivo(s) associado(s). Comunicação, pontos de dado, regras e alertas técnicos são geridos no Monitor.`,
       };
+    }
+    if (moduleId === 'rotinas') {
+      const points = usage?.points ?? [];
+      return {
+        tone: 'green',
+        status: points.length ? 'Em uso' : 'Contratado',
+        text: points.length
+          ? `Referenciado por ${points.length} ponto(s) de controle: ${points.map((p) => `${p.name} (${p.plan})`).join('; ')}. O ponto do tipo Ativo usa a identidade da Central (D-007).`
+          : 'Nenhum ponto de controle referencia este ativo.',
+      };
+    }
+    if (moduleId === 'ocorrencias') {
+      const open = usage?.openOccurrences ?? 0;
+      return { tone: 'green', status: open ? 'Em uso' : 'Contratado', text: `${open} ocorrência(s) aberta(s) relacionada(s) a este ativo.` };
     }
     if (moduleId === 'manutencao') {
       return { tone: 'green', status: 'Em uso', text: 'Solicitações e ordens de serviço deste ativo estão na aba Operação, que também permite abrir uma nova solicitação.' };
@@ -341,6 +373,16 @@ function ModulesSection({ s }: { s: Asset360 }) {
               <p className="helper" style={{ marginTop: 4 }}>
                 {d.text}
               </p>
+              {moduleId === 'rotinas' && (usage?.points.length ?? 0) > 0 && (
+                <ContextLink to="/rotinas/planos" className="helper">
+                  Ver planos de rotina
+                </ContextLink>
+              )}
+              {moduleId === 'ocorrencias' && (usage?.openOccurrences ?? 0) > 0 && (
+                <ContextLink to={`/ocorrencias/consulta?status=abertas&busca=${encodeURIComponent(s.asset.tag)}`} className="helper">
+                  Ver ocorrências abertas do ativo
+                </ContextLink>
+              )}
               {moduleId === 'security-hub' && isModuleAvailable(access, 'security-hub') && s.events.some((e) => e.securityRelevant) && (
                 <p className="helper">Veja a aba Operação para reconhecer alertas.</p>
               )}

@@ -16,6 +16,8 @@ import { paths } from '@/app/navigation/targets';
 import { QueryBoundary } from '@/pages/QueryBoundary';
 import { RoutineStatusBadge, RoutinesNav, ScoreBadge, routinePaths } from './shared';
 
+const VALIDATED_BY_LABEL: Record<string, string> = { 'qr-code': 'QR Code', geolocalizacao: 'geolocalização', justificativa: 'justificativa', 'sem-validacao': 'início sem validação' };
+
 const selectStyle = { minHeight: 32, borderRadius: 3, border: '1px solid var(--sds-border-strong)', padding: '2px 8px' } as const;
 
 /** Visão geral: status das rotinas das últimas 24 h, reinspeções e sincronização. */
@@ -226,7 +228,7 @@ export function ExecutionDetailPage() {
                           <Badge tone={p.status === 'concluido' ? 'green' : p.status === 'cancelado' ? 'gray' : 'blue'}>{p.status === 'concluido' ? 'Concluído' : p.status === 'cancelado' ? 'Cancelado' : 'Pendente'}</Badge>
                           <span className="helper">
                             {CONTROL_POINT_TYPE_LABEL[p.point.type]} · validação {POINT_VALIDATION_LABEL[p.point.validation]}
-                            {p.validatedBy && ` · verificado por ${p.validatedBy === 'justificativa' ? 'justificativa' : p.validatedBy}`}
+                            {p.validatedBy && ` · verificado por ${VALIDATED_BY_LABEL[p.validatedBy] ?? p.validatedBy}`}
                           </span>
                           {p.asset && <ContextLink to={paths.asset(p.asset.id)}>{p.asset.tag}</ContextLink>}
                         </div>

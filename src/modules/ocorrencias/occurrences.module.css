@@ -27,7 +27,7 @@
   margin: 0;
   padding: 0;
   overflow: auto;
-  max-height: 320px;
+  max-height: 460px;
 }
 .columnBody li {
   padding: 8px 12px;

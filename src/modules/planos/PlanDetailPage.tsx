@@ -333,7 +333,8 @@ function ActionsPanel({ d, onDialog, busy, run }: { d: PlanDetail; onDialog: (x:
                     <td>
                       <ActionStatusBadge value={a.status} />
                     </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
+                    <td style={{ minWidth: 150 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'flex-end' }}>
                       {v.can.start && (
                         <Button size="small" icon="play" loading={busy === `start-${a.id}`} onClick={() => run(`start-${a.id}`, () => services.plans.startAction(access, d.plan.id, a.id), `Ação A${a.number} iniciada`)}>
                           Iniciar
@@ -369,6 +370,7 @@ function ActionsPanel({ d, onDialog, busy, run }: { d: PlanDetail; onDialog: (x:
                           Cancelar
                         </Button>
                       )}
+                      </div>
                     </td>
                   </tr>
                 );

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { isLocationVisible, type AccessContext } from '@/access';
 import type { Id } from '@/domain';
 import { useDataVersion, useServices } from './ServicesProvider';
@@ -10,6 +10,8 @@ interface SessionState {
 }
 
 interface SessionValue {
+  /** Versão dos dados simulados: força re-render de quem lê dados de forma síncrona. */
+  dataVersion: number;
   access: AccessContext | null;
   activeLocationId: Id | null;
   login: (userId: Id) => void;
@@ -50,12 +52,21 @@ export function SessionProvider({ children, initialUserId }: { children: ReactNo
     writeSession(next);
   }, []);
 
-  // Recalcula o contexto de acesso quando os dados mudam (ex.: contrato alterado).
-  const access = useMemo(
-    () => (state.userId ? services.session.resolveAccessContext(state.userId) : null),
+  // Recalcula o contexto de acesso quando os dados mudam (ex.: contrato alterado),
+  // mas preserva a MESMA instância enquanto usuário, perfil, escopo e contrato não
+  // mudarem. Sem isso, toda alteração de dados recriava o contexto, as consultas
+  // tratavam como troca de parâmetro e as telas eram remontadas (perdendo estado local).
+  const accessCache = useRef<{ key: string; value: AccessContext | null }>({ key: '', value: null });
+  const access = useMemo(() => {
+    const next = state.userId ? services.session.resolveAccessContext(state.userId) : null;
+    const key = next
+      ? JSON.stringify([next.user.id, next.profile.id, next.user.scope, next.contract.planId, [...next.contract.capabilities].sort(), next.visibleLocationIds === 'all' ? 'all' : next.visibleLocationIds.size])
+      : '';
+    if (key && key === accessCache.current.key) return accessCache.current.value;
+    accessCache.current = { key, value: next };
+    return next;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.userId, services, version],
-  );
+  }, [state.userId, services, version]);
 
   // Localização contextual inválida para o escopo atual é descartada.
   const activeLocationId =
@@ -63,13 +74,14 @@ export function SessionProvider({ children, initialUserId }: { children: ReactNo
 
   const value = useMemo<SessionValue>(
     () => ({
+      dataVersion: version,
       access,
       activeLocationId,
       login: (userId) => update({ userId, activeLocationId: null }),
       logout: () => update({ userId: null, activeLocationId: null }),
       setActiveLocation: (locationId) => update({ userId: state.userId, activeLocationId: locationId }),
     }),
-    [access, activeLocationId, state.userId, update],
+    [access, activeLocationId, state.userId, update, version],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

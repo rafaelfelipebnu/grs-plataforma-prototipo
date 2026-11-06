@@ -120,7 +120,7 @@ export function createRoutineService(rt: ServiceRuntime): RoutineService {
           typeId: it.occurrenceTypeId,
           locationId: point.locationId,
           assetId: point.assetId,
-          description: `Não conformidade no item "${it.description}" (${point.name})${a.observation ? `: ${a.observation}` : ''}.`,
+          description: `Não conformidade no item "${it.description}" (${point.name})${a.observation ? `: ${a.observation.replace(/[.\s]+$/, '')}` : ''}.`,
           origin: 'nao-conformidade',
           sourceExecutionId: e.id,
           historyText: `Gerada automaticamente por não conformidade de checklist na execução ${e.code} (integração existente com Gestão de Rotinas)${a.attachments.length ? `; ${a.attachments.length} evidência(s)` : ''}.`,

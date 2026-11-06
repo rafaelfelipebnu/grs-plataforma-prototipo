@@ -354,14 +354,17 @@ function ConclusionPanel({ d }: { d: OccurrenceDetail }) {
       </ul>
       <p className="helper" style={{ marginTop: 8 }}>
         Critério de conclusão do tipo: {CONCLUSION_CRITERION_LABEL[t.criterion]}.{' '}
-        {!t.requireEvidence && !t.requireJustification && t.criterion === 'manual' ? 'Sem condições adicionais: vale a regra atual.' : ''}
+        {!t.requireEvidence && !t.requireJustification && t.criterion === 'manual' && t.requirePlan === 'nao-exige' && !t.requireReinspection
+          ? 'Sem condições adicionais: vale a regra atual.'
+          : ''}
+        {d.check.baseMet && d.check.typeBlocking && ' "Concluir" fica disponível quando as pendências configuradas no tipo forem atendidas.'}
       </p>
       {d.check.notices.map((n) => (
         <p key={n} className="helper" style={{ color: 'var(--sds-orange-dark, #a35300)' }}>
           {n}
         </p>
       ))}
-      {(t.requireEvidence || t.requireJustification || t.criterion !== 'manual') && (
+      {(t.requireEvidence || t.requireJustification || t.criterion !== 'manual' || t.requirePlan !== 'nao-exige' || t.requireReinspection) && (
         <ProvisionalTag code="P-62">Aplicação das condições provisória</ProvisionalTag>
       )}
     </Panel>

@@ -28,7 +28,8 @@ export function RoutinesNav() {
     { id: routinePaths.reinspections, label: 'Reinspeções' },
     ...(perm.execute ? [{ id: routinePaths.app, label: 'App (móvel)' }] : []),
   ];
-  const current = [...sections].reverse().find((s) => pathname === s.id || (s.id !== routinePaths.overview && pathname.startsWith(s.id)))?.id ?? routinePaths.overview;
+  const effective = pathname.startsWith('/rotinas/execucoes') ? routinePaths.executions : pathname;
+  const current = [...sections].reverse().find((s) => effective === s.id || (s.id !== routinePaths.overview && effective.startsWith(s.id)))?.id ?? routinePaths.overview;
   return (
     <div style={{ marginBottom: 16 }}>
       <Tabs label="Seções da Gestão de Rotinas" items={sections} value={current} onChange={(id) => navigate(id)} />

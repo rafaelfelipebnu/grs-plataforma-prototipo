@@ -128,6 +128,7 @@ export function conclusionCheck(o: Occurrence, t: OccurrenceType, plans: ActionP
     conditions,
     baseMet: o.status === 'em-andamento' && o.proceedings.length > 0,
     typeMet: (!t.conclusion.requireEvidence || hasAttachment(o)) && (!plan || plan.met) && reinspectionMet,
+    typeBlocking: Boolean(plan && !plan.met) || !reinspectionMet,
     notices,
     requiresApproval: t.conclusion.criterion === 'aprovacao',
   };
@@ -448,14 +449,18 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
       changePriority: perm.treat && (o.status === 'sem-tratamento' || o.status === 'em-andamento'),
       pause: perm.treat && o.status === 'em-andamento',
       resume: perm.treat && o.status === 'em-pausa',
-      conclude: perm.conclude && check.baseMet && !check.requiresApproval,
-      requestApproval: perm.conclude && check.baseMet && check.requiresApproval && !o.approvalRequest,
+      conclude: perm.conclude && check.baseMet && !check.requiresApproval && !check.typeBlocking,
+      requestApproval: perm.conclude && check.baseMet && check.requiresApproval && !o.approvalRequest && !check.typeBlocking,
       decideApproval: perm.conclude && Boolean(o.approvalRequest) && requester !== ctx.user.id,
       decideApprovalBlockedReason:
         perm.conclude && o.approvalRequest && requester === ctx.user.id ? 'Você pediu a aprovação: outra pessoa com permissão de concluir decide (P-61).' : undefined,
       concludeWithException: perm.exception && check.baseMet && hasTypeConditions(t),
       openMaintenanceRequest: isModuleAvailable(ctx, 'manutencao') && can(ctx, 'manutencao.request') && o.status !== 'concluida',
-      requestReinspection: perm.treat && o.status !== 'concluida' && isModuleAvailable(ctx, 'rotinas'),
+      requestReinspection:
+        perm.treat &&
+        o.status !== 'concluida' &&
+        isModuleAvailable(ctx, 'rotinas') &&
+        !reinspectionsOf(db, o.id).some((r) => r.status === 'pendente' || r.status === 'programada'),
       decideLinks: isModuleAvailable(ctx, 'ocorrencias') && can(ctx, 'ocorrencias.link') && (o.linkSuggestions ?? []).some((x) => x.status === 'pendente'),
     };
   };
