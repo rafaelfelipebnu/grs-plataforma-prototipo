@@ -29,7 +29,7 @@ export function OccurrenceTypesPage() {
       <Stack>
         <Alert tone="info">
           {perm.configure ? 'A edição de tipos ' : 'A configuração de tipos é restrita ao administrador. A edição '}
-          entra em entrega futura; nesta demonstração os tipos são consultados. "Exige reinspeção" será configurável com Gestão de Rotinas.
+          entra em entrega futura; nesta demonstração os tipos são consultados.
         </Alert>
         <Panel title={`Tipos (${types.length})`} flush>
           <div className={t.tableWrap}>
@@ -46,6 +46,7 @@ export function OccurrenceTypesPage() {
                   <th scope="col">Conclusão: justificativa</th>
                   <th scope="col">Critério de conclusão</th>
                   <th scope="col">Plano de ação</th>
+                  <th scope="col">Exige reinspeção</th>
                 </tr>
               </thead>
               <tbody>
@@ -62,6 +63,7 @@ export function OccurrenceTypesPage() {
                     <td>{yes(x.conclusion.requireJustification)}</td>
                     <td>{CONCLUSION_CRITERION_LABEL[x.conclusion.criterion]}</td>
                     <td>{PLAN_REQUIREMENT_LABEL[x.conclusion.requirePlan]}</td>
+                    <td>{yes(x.conclusion.requireReinspection)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -7,31 +7,35 @@ import type { ISODateString, Occurrence, OccurrenceType } from '@/domain';
 export const DEMO_OCCURRENCE_TYPES: OccurrenceType[] = [
   {
     id: 'tp-vidro', name: 'Vidro quebrado', defaultPriority: 'media', monitored: false, warningSound: false,
-    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'nao-exige' },
+    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'nao-exige', requireReinspection: false },
   },
   {
     id: 'tp-vazamento', name: 'Vazamento', defaultPriority: 'alta', monitored: true, warningSound: false,
-    notifiedEmails: ['facilities@aurora-demo.invalid'], conclusion: { requireEvidence: true, requireJustification: false, criterion: 'manual', requirePlan: 'nao-exige' },
+    notifiedEmails: ['facilities@aurora-demo.invalid'], conclusion: { requireEvidence: true, requireJustification: false, criterion: 'manual', requirePlan: 'nao-exige', requireReinspection: false },
   },
   {
     id: 'tp-acesso', name: 'Acesso indevido', defaultPriority: 'alta', monitored: true, warningSound: true,
-    notifiedEmails: ['seguranca@aurora-demo.invalid'], conclusion: { requireEvidence: false, requireJustification: true, criterion: 'manual', requirePlan: 'nao-exige' },
+    notifiedEmails: ['seguranca@aurora-demo.invalid'], conclusion: { requireEvidence: false, requireJustification: true, criterion: 'manual', requirePlan: 'nao-exige', requireReinspection: false },
   },
   {
     id: 'tp-equip-seg', name: 'Falha em equipamento de segurança', defaultPriority: 'critica', monitored: true, warningSound: true,
-    notifiedEmails: ['seguranca@aurora-demo.invalid'], conclusion: { requireEvidence: true, requireJustification: false, criterion: 'aprovacao', requirePlan: 'nao-exige' },
+    notifiedEmails: ['seguranca@aurora-demo.invalid'], conclusion: { requireEvidence: true, requireJustification: false, criterion: 'aprovacao', requirePlan: 'nao-exige', requireReinspection: false },
   },
   {
     id: 'tp-ronda', name: 'Irregularidade em ronda', defaultPriority: 'media', monitored: false, warningSound: false,
-    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'exige-iniciado' },
+    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'exige-iniciado', requireReinspection: false },
   },
   {
     id: 'tp-auditoria', name: 'Verificação programada', defaultPriority: 'planejada', monitored: false, warningSound: false,
-    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'nao-exige' },
+    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'nao-exige', requireReinspection: false },
+  },
+  {
+    id: 'tp-inspecao', name: 'Não conformidade de inspeção', defaultPriority: 'media', monitored: false, warningSound: false,
+    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'nao-exige', requireReinspection: true },
   },
   {
     id: 'tp-desvio', name: 'Desvio de procedimento de segurança', defaultPriority: 'alta', monitored: false, warningSound: false,
-    notifiedEmails: ['seguranca@aurora-demo.invalid'], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'exige-concluido' },
+    notifiedEmails: ['seguranca@aurora-demo.invalid'], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'exige-concluido', requireReinspection: false },
   },
 ];
 
@@ -89,7 +93,7 @@ export function createDemoOccurrences(at: (minutesAgo: number) => ISODateString)
     {
       ...base,
       id: 'oc-005', code: 'OC-0005', typeId: 'tp-ronda', locationId: 'loc-joi-portaria', description: 'Não conformidade no ponto "Portão de veículos trancado" durante a ronda noturna.',
-      occurredAt: at(420), createdAt: at(418), priority: 'media', origin: 'nao-conformidade', registeredByUserId: 'sistema', status: 'sem-tratamento', proceedings: [],
+      occurredAt: at(420), createdAt: at(418), priority: 'media', origin: 'nao-conformidade', sourceExecutionId: 're-003', registeredByUserId: 'sistema', status: 'sem-tratamento', proceedings: [],
       history: [{ at: at(418), actorUserId: 'sistema', kind: 'automatico', text: 'Gerada automaticamente por não conformidade de checklist (integração existente com Gestão de Rotinas — simulada).' }],
     },
     {
@@ -122,6 +126,19 @@ export function createDemoOccurrences(at: (minutesAgo: number) => ISODateString)
         { at: at(5 * 1440 - 20), actorUserId: 'u-seg', kind: 'acao', text: 'Ocorrência registrada — Registro por usuário. Prioridade Alta.' },
         { at: at(5 * 1440 - 60), actorUserId: 'u-seg', kind: 'acao', text: 'Primeiro trâmite registrado: ocorrência Em andamento (tempo de resposta encerrado).' },
         { at: at(5 * 1440 - 50), actorUserId: 'sistema', kind: 'automatico', text: 'Plano de ação PA-0001 vinculado.' },
+      ],
+    },
+    {
+      ...base,
+      id: 'oc-009', code: 'OC-0009', typeId: 'tp-inspecao', locationId: 'loc-joi-bombas', assetId: 'a-bmb014',
+      description: 'Não conformidade no item "Painel da bomba sem alarmes ativos": alarme de baixa pressão ativo no painel.',
+      occurredAt: at(2 * 1440), createdAt: at(2 * 1440), priority: 'media', origin: 'nao-conformidade', sourceExecutionId: 're-005', registeredByUserId: 'sistema',
+      status: 'em-andamento', firstProceedingAt: at(1500),
+      proceedings: [{ id: 'tr-007', at: at(1500), byUserId: 'u-seg', text: 'Pressostato recalibrado pela manutenção. Solicitada reinspeção para confirmar.', attachments: [] }],
+      history: [
+        { at: at(2 * 1440), actorUserId: 'sistema', kind: 'automatico', text: 'Gerada automaticamente por não conformidade de checklist na execução EX-0005 (integração existente com Gestão de Rotinas).' },
+        { at: at(1500), actorUserId: 'u-seg', kind: 'acao', text: 'Primeiro trâmite registrado: ocorrência Em andamento (tempo de resposta encerrado).' },
+        { at: at(1440), actorUserId: 'u-seg', kind: 'automatico', text: 'Reinspeção solicitada à Gestão de Rotinas (aguardando programação).' },
       ],
     },
   ];

@@ -400,6 +400,23 @@ Hipóteses adotadas **só para demonstrar o fluxo**; não são decisões aprovad
 | P-78 | Notificações de planos | Somente no sino: responsável (criação, todas as ações finalizadas, dependência cancelada, decisões), executores (ativação, nova ação), aprovador do plano, avaliador e aprovador da avaliação. | Princípios da DP-07 | `notify` em `planService.ts` |
 | P-79 | Vínculos | Um plano pode ser vinculado a mais de uma ocorrência e não há desvincular. Multiplicidade (DP-25a) e vincular/desvincular (DP-25b) são orientações para análise futura, não aprovadas. | DP-25a/b em orientação | `linkOccurrence` |
 
+## Comportamentos provisórios (etapa 5 — Gestão de Rotinas, 4ª entrega) — a validar
+
+Hipóteses adotadas **só para demonstrar o fluxo**; não são decisões aprovadas. O comportamento existente (Q-03) foi preservado. Regras aprovadas aplicadas: D-005 e D-013 (sugestão de vínculo, D-005a–d), D-006 e D-013 (reinspeção, D-006a–c, DP-09, D-006e), D-009 (DP-11, DP-12, DP-15) e D-010 (DP-07: N1, N2).
+
+| # | Tema | Comportamento provisório (hipótese) | Base | Onde alterar |
+|---|------|--------------------------|------|--------------|
+| P-80 | Cadastros de Rotinas | Plano de rotina, pontos de controle, checklists e rotinas só em consulta. Agendamento exibido de forma simplificada (janela e recorrência em texto). Fora desta entrega: dispositivos móveis, contatos, feriados, relatórios, botão de pânico, cadastro de ativos de Rotinas e respostas de assinatura/pessoa/veículo. | Produto existente (Q-03) | `src/data/seed/routines.ts`, `CatalogPage` |
+| P-81 | App demonstrativo | O app roda na mesma aplicação (web responsiva). Login e token omitidos; verificação de local pela opção "Lista"; QR Code, geolocalização, fotos e conexão são simulados. | Experiência móvel de Rotinas (docs/00) | `AppPages.tsx` |
+| P-82 | Status ao finalizar | Todos os pontos concluídos → Concluída; com pontos cancelados → Finalizado Parcialmente; pontos não lidos (justificativa obrigatória) → Incompleta. "Interrompida" não é produzida: a diferença entre Interrompida e Incompleta não está documentada. | Referência 1.12; G-R-05 a G-R-07 | `finishExecution` |
+| P-83 | Critérios da sugestão de vínculo | Candidatas: ocorrências abertas, mesmo tipo e **mesmo local exato**; ativo coincidente aumenta a relevância. Sem janela temporal configurada, não há limite de tempo. Vale para não conformidade e rotina não executada (não para pânico). Local ancestral/descendente continua em aberto. | D-005a–d (D-013) | `suggestLinks` em `occurrenceService.ts` |
+| P-84 | Permissão "Confirmar vínculo" | Nova permissão `ocorrencias.link` (Administrador, Gestor de Segurança, Gestor Local), conforme a matriz demonstrativa. Recebe a N1 no sino. | DP-05, matriz demonstrativa | `src/access/profiles.ts` |
+| P-85 | Momento das integrações | Online: ocorrência por não conformidade e resultado de reinspeção na finalização. Offline: só após "Sincronizar". E-mails do checklist e do tipo não são disparados. | Referência 1.14.10; D-005 | `applySyncEffects` |
+| P-86 | Reinspeção sem resultado | "Não realizada" é registrada por ação manual do gestor (o gatilho real não está documentado — G-R-05). Reinspeção finalizada como Incompleta ou Finalizado Parcialmente encerra o pedido **sem resultado conclusivo**. Em ambos, não atende "exige reinspeção" e é possível pedir outra. | D-006e (D-013); execuções parciais em aberto | `markReinspectionNotRealized`, `applySyncEffects` |
+| P-87 | Verificação de rotinas não executadas | O job existente (a cada 10 min) é simulado por um botão do gestor: rotinas agendadas com janela vencida e ainda pendentes viram "Não realizada" e, com tipo configurado na rotina, geram ocorrência no local do plano. | Referência 1.4 | `checkMissed` |
+| P-88 | Score | Percentual de checklists conformes por ponto × checklist respondido. "Não se aplica" e texto não contam como não conformidade. | Referência 1.11 | `score` em `routineService.ts` |
+| P-89 | Programação da reinspeção | Pontos sugeridos: os da execução de origem com não conformidade e os do mesmo ativo/local da ocorrência. Checklist sugerido: o indicado no pedido. O gestor escolhe o plano pelo ponto. | D-006a/b (D-013) | `reinspections`, `ProgramModal` |
+
 ## Dúvidas em aberto
 
 Não bloqueiam a etapa 1. Precisam de definição antes das etapas indicadas.

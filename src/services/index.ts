@@ -14,6 +14,7 @@ import { createLocationService } from './mock/locationService';
 import { createMaintenanceService } from './mock/maintenanceService';
 import { createOccurrenceService } from './mock/occurrenceService';
 import { createPlanService } from './mock/planService';
+import { createRoutineService } from './mock/routineService';
 import { createNotificationService } from './mock/notificationService';
 import { createPeopleService } from './mock/peopleService';
 import { createSearchService } from './mock/searchService';
@@ -72,6 +73,7 @@ export function createServices(options: CreateServicesOptions = {}): ServiceBund
       maintenance: createMaintenanceService(runtime),
       occurrences: createOccurrenceService(runtime),
       plans: createPlanService(runtime),
+      routines: createRoutineService(runtime),
     },
   };
 }

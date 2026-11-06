@@ -14,6 +14,7 @@ export const paths = {
   workOrder: (id: string) => `/manutencao/os/${id}`,
   occurrence: (id: string) => `/ocorrencias/${id}`,
   plan: (id: string) => `/planos/${id}`,
+  routineExecution: (id: string) => `/rotinas/execucoes/${id}`,
 };
 
 /**
@@ -41,6 +42,8 @@ export function resolveTargetPath(target: NavTarget, access: AccessContext, serv
       return paths.occurrence(target.id);
     case 'action-plan':
       return paths.plan(target.id);
+    case 'routine-execution':
+      return paths.routineExecution(target.id);
     case 'event': {
       const info = services.events.routingInfo(access, target.id);
       if (!info) return null;

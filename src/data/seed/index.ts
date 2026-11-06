@@ -13,6 +13,7 @@ import { DEMO_PEOPLE, DEMO_USERS } from './people';
 import { DEMO_REDIRECT_DESTINATIONS, createDemoMaintenance } from './maintenance';
 import { DEMO_OCCURRENCE_TYPES, createDemoOccurrences } from './occurrences';
 import { createDemoActionPlans } from './actionPlans';
+import { createDemoRoutines } from './routines';
 
 /**
  * Cria o cenário de demonstração. Os horários são relativos a `now` para que
@@ -21,6 +22,7 @@ import { createDemoActionPlans } from './actionPlans';
 export function createDemoSeed(now: Date = new Date()): DemoDatabase {
   const at = (minutesAgo: number): ISODateString => new Date(now.getTime() - minutesAgo * 60_000).toISOString();
   const maintenance = createDemoMaintenance(at, now);
+  const routines = createDemoRoutines(at);
 
   return structuredClone({
     meta: { schemaVersion: DEMO_SCHEMA_VERSION, seededAt: now.toISOString() },
@@ -48,7 +50,14 @@ export function createDemoSeed(now: Date = new Date()): DemoDatabase {
     pointReadings: [],
     occurrenceTypes: DEMO_OCCURRENCE_TYPES,
     occurrences: createDemoOccurrences(at),
-    occurrenceCounter: 8,
+    occurrenceCounter: 9,
+    routinePlans: routines.plans,
+    controlPoints: routines.points,
+    checklists: routines.checklists,
+    routines: routines.routines,
+    routineExecutions: routines.executions,
+    reinspectionRequests: routines.reinspections,
+    routineCounter: routines.counter,
     actionPlans: createDemoActionPlans(at, now),
     planCounter: 3,
     maintenanceRequests: maintenance.requests,
@@ -58,6 +67,6 @@ export function createDemoSeed(now: Date = new Date()): DemoDatabase {
     events: createDemoEvents(at),
     accessPassages: createDemoAccessPassages(at),
     dashboards: { clientDefault: createDefaultDashboard(at(1440)), personal: {} },
-    demoSettings: { liveSimulation: true },
+    demoSettings: { liveSimulation: true, routinesAppOffline: false },
   } satisfies DemoDatabase);
 }

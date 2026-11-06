@@ -26,6 +26,7 @@ const PERMISSION_LABEL: Record<Permission, string> = {
   'ocorrencias.treat': 'Gestão de Ocorrências — tratar (trâmite, pausa, prioridade)',
   'ocorrencias.conclude': 'Gestão de Ocorrências — concluir e aprovar conclusão',
   'ocorrencias.exception': 'Gestão de Ocorrências — autorizar exceção de conclusão',
+  'ocorrencias.link': 'Gestão de Ocorrências — confirmar sugestão de vínculo',
   'ocorrencias.configure': 'Gestão de Ocorrências — configurar tipos',
   'planos.view': 'Planos de ação — consultar (escopo do local do plano)',
   'planos.manage': 'Planos de ação — criar, ser responsável e vincular',

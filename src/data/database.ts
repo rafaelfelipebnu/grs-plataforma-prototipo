@@ -29,6 +29,12 @@ import type {
   Occurrence,
   OccurrenceType,
   ActionPlan,
+  Checklist,
+  ControlPoint,
+  ReinspectionRequest,
+  Routine,
+  RoutineExecution,
+  RoutinePlan,
 } from '@/domain';
 
 /**
@@ -74,6 +80,14 @@ export interface DemoDatabase {
   occurrenceTypes: OccurrenceType[];
   occurrences: Occurrence[];
   occurrenceCounter: number;
+  // Gestão de Rotinas (produto existente)
+  routinePlans: RoutinePlan[];
+  controlPoints: ControlPoint[];
+  checklists: Checklist[];
+  routines: Routine[];
+  routineExecutions: RoutineExecution[];
+  reinspectionRequests: ReinspectionRequest[];
+  routineCounter: number;
   // Planos de Ação (capacidade compartilhada GRS)
   actionPlans: ActionPlan[];
   planCounter: number;
@@ -99,8 +113,10 @@ export interface DemoDatabase {
   demoSettings: {
     /** Gera passagens de acesso simuladas periodicamente. */
     liveSimulation: boolean;
+    /** App de Rotinas simulado sem conexão (dados ficam pendentes de sincronização). */
+    routinesAppOffline: boolean;
   };
 }
 
 /** Incrementar quando o formato mudar: dados persistidos antigos são descartados. */
-export const DEMO_SCHEMA_VERSION = 7;
+export const DEMO_SCHEMA_VERSION = 8;

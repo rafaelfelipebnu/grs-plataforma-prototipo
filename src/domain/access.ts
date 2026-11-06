@@ -37,6 +37,7 @@ export type Permission =
   | 'ocorrencias.treat'
   | 'ocorrencias.conclude'
   | 'ocorrencias.exception'
+  | 'ocorrencias.link'
   | 'ocorrencias.configure'
   | 'planos.view'
   | 'planos.manage'

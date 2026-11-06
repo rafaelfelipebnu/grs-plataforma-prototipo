@@ -15,6 +15,8 @@ import { paths } from '@/app/navigation/targets';
 import { QueryBoundary } from '@/pages/QueryBoundary';
 import { OccurrenceNav, OccurrencePriorityBadge, OccurrenceStatusBadge, occurrencePaths, occurrenceStyles as s } from './shared';
 import { PlanStatusBadge, planPaths } from '@/modules/planos/shared';
+import { routinePaths } from '@/modules/rotinas/shared';
+import { LinkPanel, ReinspectionPanel } from './IntegrationPanels';
 
 type Dialog = 'pausar' | 'prioridade' | 'concluir' | 'pedir-aprovacao' | 'aprovar' | 'recusar' | 'excecao' | null;
 
@@ -177,6 +179,11 @@ function DetailView({ d }: { d: OccurrenceDetail }) {
                 </LabelValue>
                 <LabelValue label="Origem">
                   {OCCURRENCE_ORIGIN_LABEL[o.origin]}
+                  {d.sourceExecution && (
+                    <div>
+                      Execução <ContextLink to={routinePaths.execution(d.sourceExecution.id)}>{d.sourceExecution.code}</ContextLink>
+                    </div>
+                  )}
                   {d.sourceEvent && (
                     <div>
                       <ContextLink to={paths.event(d.sourceEvent.id)}>
@@ -197,6 +204,10 @@ function DetailView({ d }: { d: OccurrenceDetail }) {
             <ProceedingsPanel d={d} />
 
             <PlansPanel d={d} />
+
+            <ReinspectionPanel d={d} />
+
+            <LinkPanel d={d} />
 
             {(d.linkedRequests.length > 0 || d.hiddenLinkedRequests > 0) && (
               <Panel title="Solicitações de manutenção">
@@ -345,6 +356,11 @@ function ConclusionPanel({ d }: { d: OccurrenceDetail }) {
         Critério de conclusão do tipo: {CONCLUSION_CRITERION_LABEL[t.criterion]}.{' '}
         {!t.requireEvidence && !t.requireJustification && t.criterion === 'manual' ? 'Sem condições adicionais: vale a regra atual.' : ''}
       </p>
+      {d.check.notices.map((n) => (
+        <p key={n} className="helper" style={{ color: 'var(--sds-orange-dark, #a35300)' }}>
+          {n}
+        </p>
+      ))}
       {(t.requireEvidence || t.requireJustification || t.criterion !== 'manual') && (
         <ProvisionalTag code="P-62">Aplicação das condições provisória</ProvisionalTag>
       )}

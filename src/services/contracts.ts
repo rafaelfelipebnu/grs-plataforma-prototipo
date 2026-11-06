@@ -65,6 +65,13 @@ import type {
   EffectivenessResult,
   PlanAction,
   PlanStatus,
+  Checklist,
+  ControlPoint,
+  ReinspectionRequest,
+  Routine,
+  RoutineExecution,
+  RoutineExecutionStatus,
+  RoutinePlan,
 } from '@/domain';
 
 /**
@@ -1128,6 +1135,8 @@ export interface ConclusionCheck {
   /** Condições do tipo verificáveis antes da conclusão atendidas. */
   typeMet: boolean;
   requiresApproval: boolean;
+  /** Avisos que não bloqueiam (ex.: reinspeção pendente em tipo que não a exige — DP-09). */
+  notices: string[];
 }
 
 export interface OccurrenceActions {
@@ -1142,6 +1151,8 @@ export interface OccurrenceActions {
   decideApprovalBlockedReason?: string;
   concludeWithException: boolean;
   openMaintenanceRequest: boolean;
+  requestReinspection: boolean;
+  decideLinks: boolean;
 }
 
 export interface OccurrenceHistoryView {
@@ -1179,6 +1190,10 @@ export interface OccurrenceDetail extends OccurrenceListItem {
   linkedPlans: { id: Id; code: string; title: string; status: ActionPlan['status'] }[];
   /** Tempo de resposta (registro → 1º trâmite humano) e de solução (descontando pausas). */
   times: { responseMs?: number; solutionMs?: number; pausedMs: number };
+  reinspections: { id: Id; status: ReinspectionRequest['status']; result?: 'ok' | 'nao-ok'; requestedAt: string; executionId?: Id; executionCode?: string }[];
+  suggestions: { candidateId: Id; code: string; typeName: string; reason: string; status: 'pendente' | 'confirmada' | 'independente' | 'expirada'; expiredReason?: string }[];
+  related: { id: Id; code: string; typeName: string; visible: boolean }[];
+  sourceExecution?: { id: Id; code: string };
   approvalRequestedByName?: string;
   conclusionByName?: string;
   approvedByName?: string;
@@ -1230,6 +1245,10 @@ export interface OccurrenceService {
   requestApproval(ctx: AccessContext, id: Id, input: ConclusionInput): Promise<void>;
   decideApproval(ctx: AccessContext, id: Id, approve: boolean, reason: string): Promise<void>;
   concludeWithException(ctx: AccessContext, id: Id, justification: string): Promise<void>;
+  /** Pede reinspeção à Gestão de Rotinas (D-006): Rotinas programa e executa. */
+  requestReinspection(ctx: AccessContext, id: Id, input: { suggestedDate?: string; suggestedChecklistId?: Id }): Promise<void>;
+  /** D-005: confirmar o vínculo ou manter independente (permissão "Confirmar vínculo"). */
+  decideLinkSuggestion(ctx: AccessContext, id: Id, candidateId: Id, confirm: boolean): Promise<void>;
   /** Dados do evento para pré-preencher o registro (origem preservada). */
   eventPrefill(ctx: AccessContext, eventId: Id): { event: OperationalEvent; locationId: Id; assetId?: Id } | null;
   /** Dados da ocorrência para pré-preencher uma solicitação de manutenção (origem preservada). */
@@ -1407,6 +1426,130 @@ export interface PlanService {
   decideEvaluation(ctx: AccessContext, planId: Id, approve: boolean, reason: string): Promise<void>;
 }
 
+// ── Gestão de Rotinas (produto existente) ────────────────────────────
+
+export interface RoutinePermissions {
+  view: boolean;
+  manage: boolean;
+  execute: boolean;
+}
+
+export interface ExecutionListItem {
+  execution: RoutineExecution;
+  routine: Routine;
+  plan: RoutinePlan;
+  operatorName?: string;
+  /** Score = percentual de checklists conformes (existente). null = sem checklist respondido. */
+  score: number | null;
+  pointsDone: number;
+  pointsTotal: number;
+  isReinspection: boolean;
+}
+
+export interface ExecutionQuery {
+  status?: RoutineExecutionStatus;
+  scheduled?: 'sim' | 'nao';
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PointExecutionView {
+  point: ControlPoint;
+  status: 'pendente' | 'concluido' | 'cancelado';
+  validatedBy?: string;
+  validationJustification?: string;
+  cancelReason?: string;
+  finishedAt?: string;
+  checklists: { checklist: Checklist; answers: RoutineExecution['points'][number]['answers'] }[];
+  locationPath: Location[];
+  asset?: Asset;
+}
+
+export interface ExecutionDetail extends ExecutionListItem {
+  points: PointExecutionView[];
+  generatedOccurrences: { id: Id; code: string; typeName: string }[];
+  /** Reinspeção: ocorrência de origem (referência). */
+  reinspectionOf?: { occurrenceId: Id; code: string };
+  /** O app pode iniciar esta execução agora? Motivo quando não. */
+  startBlockedReason?: string;
+  canStart: boolean;
+  canWork: boolean;
+}
+
+export interface PlanCatalogItem {
+  plan: RoutinePlan;
+  locationPath: Location[];
+  points: (ControlPoint & { checklistNames: string[]; locationName?: string; assetTag?: string })[];
+  routines: Routine[];
+  checklists: Checklist[];
+}
+
+export interface ReinspectionView {
+  request: ReinspectionRequest;
+  occurrence: { id: Id; code: string; typeName: string; status: OccurrenceStatus; locationId: Id; assetId?: Id };
+  requestedByName: string;
+  /** Pontos sugeridos (do ativo/local da ocorrência ou da execução de origem). */
+  suggestedPointIds: Id[];
+  executionCode?: string;
+}
+
+export interface RoutineOverview {
+  today: Record<RoutineExecutionStatus, number>;
+  pendingReinspections: number;
+  pendingSync: number;
+  recent: ExecutionListItem[];
+}
+
+export interface AnswerInput {
+  checklistId: Id;
+  itemId: Id;
+  value: string;
+  observation?: string;
+  attachments: string[];
+}
+
+export interface AppState {
+  offline: boolean;
+  pendingSync: number;
+  lastSyncAt?: string;
+  /** Planos com seleção manual de local (opção "Lista"). */
+  plans: RoutinePlan[];
+}
+
+export interface SyncResult {
+  synced: string[];
+  generatedOccurrences: string[];
+  suggestions: number;
+}
+
+export interface RoutineService {
+  permissions(ctx: AccessContext): RoutinePermissions;
+  overview(ctx: AccessContext): Promise<RoutineOverview>;
+  listExecutions(ctx: AccessContext, query: ExecutionQuery): Promise<Paged<ExecutionListItem>>;
+  getExecution(ctx: AccessContext, id: Id): Promise<ExecutionDetail>;
+  catalog(ctx: AccessContext): Promise<PlanCatalogItem[]>;
+  reinspections(ctx: AccessContext): Promise<ReinspectionView[]>;
+  /** Gestor programa a reinspeção como rotina não agendada de execução única (D-013). */
+  programReinspection(ctx: AccessContext, requestId: Id, input: { pointId: Id; checklistId: Id }): Promise<RoutineExecution>;
+  /** PROVISÓRIO (P-86): encerra o pedido como não realizado, sem resultado (D-006e). */
+  markReinspectionNotRealized(ctx: AccessContext, requestId: Id, reason: string): Promise<void>;
+  /** Simula o job existente (a cada 10 min): agendadas vencidas viram "Não realizada" e geram ocorrência. */
+  checkMissed(ctx: AccessContext): Promise<{ missed: string[]; generatedOccurrences: string[] }>;
+  // App móvel (simulado)
+  appState(ctx: AccessContext): AppState;
+  setOffline(ctx: AccessContext, offline: boolean): Promise<void>;
+  /** Rotinas do plano selecionado: agendadas (Pendente, Em execução, Futura) e não agendadas. */
+  appRoutines(ctx: AccessContext, planId: Id): Promise<{ scheduled: ExecutionListItem[]; unscheduled: { routine: Routine; execution?: ExecutionListItem; executionsCount: number }[]; history: ExecutionListItem[] }>;
+  startExecution(ctx: AccessContext, executionId: Id): Promise<void>;
+  startUnscheduled(ctx: AccessContext, routineId: Id): Promise<RoutineExecution>;
+  validatePoint(ctx: AccessContext, executionId: Id, pointId: Id, method: 'qr-code' | 'geolocalizacao' | 'justificativa' | 'sem-validacao', justification?: string): Promise<void>;
+  answerPoint(ctx: AccessContext, executionId: Id, pointId: Id, answers: AnswerInput[]): Promise<void>;
+  cancelPoint(ctx: AccessContext, executionId: Id, pointId: Id, reason: string): Promise<void>;
+  finishExecution(ctx: AccessContext, executionId: Id, justification?: string): Promise<{ status: RoutineExecutionStatus; synced: boolean }>;
+  sync(ctx: AccessContext): Promise<SyncResult>;
+}
+
 export interface Services {
   session: SessionService;
   locations: LocationService;
@@ -1425,5 +1568,6 @@ export interface Services {
   maintenance: MaintenanceService;
   occurrences: OccurrenceService;
   plans: PlanService;
+  routines: RoutineService;
   demo: DemoService;
 }

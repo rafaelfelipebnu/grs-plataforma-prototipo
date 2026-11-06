@@ -16,3 +16,4 @@ export * from './monitor';
 export * from './maintenance';
 export * from './occurrence';
 export * from './actionPlan';
+export * from './routine';

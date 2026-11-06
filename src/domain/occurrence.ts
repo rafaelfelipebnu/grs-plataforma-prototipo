@@ -73,6 +73,8 @@ export interface OccurrenceType {
     criterion: ConclusionCriterion;
     /** Exigência de plano de ação (DP-10). Ausente ou 'nao-exige' = regra atual. */
     requirePlan: PlanRequirement;
+    /** Exige reinspeção: atendida pelo último resultado OK (DP-11); pedido pendente bloqueia (DP-09). */
+    requireReinspection: boolean;
   };
 }
 
@@ -117,6 +119,12 @@ export interface Occurrence {
   origin: OccurrenceOrigin;
   /** Evento do Security Hub de origem, quando origin = 'evento'. */
   sourceEventId?: Id;
+  /** Execução de rotina de origem (não conformidade ou rotina não executada). */
+  sourceExecutionId?: Id;
+  /** Sugestões de vínculo após a sincronização (D-005). Só usuário autorizado confirma. */
+  linkSuggestions?: { candidateId: Id; reason: string; status: 'pendente' | 'confirmada' | 'independente' | 'expirada'; at: ISODateString; decidedByUserId?: Id; expiredReason?: string }[];
+  /** Ocorrências relacionadas por vínculo confirmado (históricos próprios, sem fusão). */
+  relatedOccurrenceIds?: Id[];
   registeredByUserId: Id | 'sistema';
   involvedPersonIds: Id[];
   status: OccurrenceStatus;

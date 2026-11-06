@@ -40,6 +40,8 @@ import { NewOccurrencePage } from '@/modules/ocorrencias/NewOccurrencePage';
 import { OccurrenceDetailPage } from '@/modules/ocorrencias/OccurrenceDetailPage';
 import { OccurrenceTypesPage } from '@/modules/ocorrencias/OccurrenceTypesPage';
 import { PlansListPage } from '@/modules/planos/PlansListPage';
+import { CatalogPage, ExecutionDetailPage, ExecutionsPage, ReinspectionsPage, RoutinesHomePage } from '@/modules/rotinas/RoutinesPages';
+import { RoutinesAppExecutionPage, RoutinesAppHomePage } from '@/modules/rotinas/AppPages';
 import { NewPlanPage } from '@/modules/planos/NewPlanPage';
 import { PlanDetailPage } from '@/modules/planos/PlanDetailPage';
 
@@ -56,6 +58,7 @@ const MODULE_INDEX: Partial<Record<ModuleId, JSX.Element>> = {
   monitor: <MonitorOverviewPage />,
   manutencao: <MaintenanceHomePage />,
   ocorrencias: <OccurrencePanelPage />,
+  rotinas: <RoutinesHomePage />,
 };
 
 /** Rotas de cada módulo (crescem a cada etapa). */
@@ -74,6 +77,14 @@ const MODULE_CHILD_ROUTES: Partial<Record<ModuleId, RouteObject[]>> = {
     { path: 'regras', element: <RulesPage /> },
     { path: 'alertas', element: <MonitorAlertsPage /> },
     { path: 'historico', element: <MonitorHistoryPage /> },
+  ],
+  rotinas: [
+    { path: 'consulta', element: <ExecutionsPage /> },
+    { path: 'execucoes/:executionId', element: <ExecutionDetailPage /> },
+    { path: 'planos', element: <CatalogPage /> },
+    { path: 'reinspecoes', element: <ReinspectionsPage /> },
+    { path: 'app', element: <RoutinesAppHomePage /> },
+    { path: 'app/:executionId', element: <RoutinesAppExecutionPage /> },
   ],
   ocorrencias: [
     { path: 'consulta', element: <OccurrenceSearchPage /> },

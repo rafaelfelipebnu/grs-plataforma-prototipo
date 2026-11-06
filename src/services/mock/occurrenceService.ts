@@ -11,6 +11,7 @@ import {
   type OccurrenceType,
   type Permission,
   type ActionPlan,
+  type ReinspectionRequest,
 } from '@/domain';
 import type {
   ConclusionCheck,
@@ -40,7 +41,26 @@ function requireText(value: string | undefined, label: string): string {
 }
 
 const hasTypeConditions = (t: OccurrenceType) =>
-  t.conclusion.requireEvidence || t.conclusion.requireJustification || t.conclusion.criterion !== 'manual' || t.conclusion.requirePlan !== 'nao-exige';
+  t.conclusion.requireEvidence ||
+  t.conclusion.requireJustification ||
+  t.conclusion.criterion !== 'manual' ||
+  t.conclusion.requirePlan !== 'nao-exige' ||
+  t.conclusion.requireReinspection;
+
+/** Reinspeções pedidas pela ocorrência (dados de Rotinas, por consulta). */
+export function reinspectionsOf(db: Readonly<DemoDatabase>, occurrenceId: Id): ReinspectionRequest[] {
+  return db.reinspectionRequests.filter((r) => r.occurrenceId === occurrenceId);
+}
+
+/**
+ * Reinspeção (DP-09, DP-11, D-013): exigida = último resultado OK e nenhum
+ * pedido aguardando resultado. "Não realizada" não conta como resultado.
+ */
+function reinspectionState(rs: ReinspectionRequest[]): { pending: boolean; last?: ReinspectionRequest } {
+  const pending = rs.some((r) => r.status === 'pendente' || r.status === 'programada');
+  const last = rs.filter((r) => r.status === 'executada' && r.resultAt).sort((a, b) => b.resultAt!.localeCompare(a.resultAt!))[0];
+  return { pending, last };
+}
 const hasAttachment = (o: Occurrence) => o.proceedings.some((p) => p.attachments.length > 0);
 
 /** Planos vinculados à ocorrência (qualquer origem, inclusive vinculados depois — DP-10a). */
@@ -77,7 +97,7 @@ export function planRequirementMet(t: OccurrenceType, plans: ActionPlan[]): { me
  * (DP-04). A regra fica na camada de serviço para valer igualmente no
  * detalhe e em lote (DP-04a).
  */
-export function conclusionCheck(o: Occurrence, t: OccurrenceType, plans: ActionPlan[] = []): ConclusionCheck {
+export function conclusionCheck(o: Occurrence, t: OccurrenceType, plans: ActionPlan[] = [], reinspections: ReinspectionRequest[] = []): ConclusionCheck {
   const conditions: ConclusionCheck['conditions'] = [
     { label: 'Ao menos um trâmite registrado', origin: 'regra-atual', state: o.proceedings.length > 0 ? 'atendida' : 'pendente' },
     { label: 'Não estar em pausa (retome antes de concluir)', origin: 'regra-atual', state: o.status === 'em-pausa' ? 'pendente' : 'atendida' },
@@ -91,13 +111,24 @@ export function conclusionCheck(o: Occurrence, t: OccurrenceType, plans: ActionP
     const label = t.conclusion.requirePlan === 'exige-iniciado' ? 'Plano de ação iniciado' : 'Planos de ação concluídos';
     conditions.push({ label: `${label} (${plan.detail})`, origin: 'tipo', state: plan.met ? 'atendida' : 'pendente' });
   }
+  const rs = reinspectionState(reinspections);
+  let reinspectionMet = true;
+  const notices: string[] = [];
+  if (t.conclusion.requireReinspection) {
+    reinspectionMet = !rs.pending && rs.last?.result === 'ok';
+    const detail = rs.pending ? 'reinspeção solicitada aguardando resultado' : rs.last ? (rs.last.result === 'ok' ? 'último resultado OK' : 'último resultado não OK') : 'nenhuma reinspeção com resultado';
+    conditions.push({ label: `Reinspeção OK (${detail})`, origin: 'tipo', state: reinspectionMet ? 'atendida' : 'pendente' });
+  } else if (rs.pending) {
+    notices.push('Há reinspeção solicitada sem resultado. O tipo não exige reinspeção: é possível concluir; um resultado posterior fica registrado no histórico.');
+  }
   if (t.conclusion.criterion === 'aprovacao') {
     conditions.push({ label: o.approvalRequest ? 'Aprovação da conclusão (pedido aguardando decisão)' : 'Aprovação da conclusão', origin: 'tipo', state: 'pendente' });
   }
   return {
     conditions,
     baseMet: o.status === 'em-andamento' && o.proceedings.length > 0,
-    typeMet: (!t.conclusion.requireEvidence || hasAttachment(o)) && (!plan || plan.met),
+    typeMet: (!t.conclusion.requireEvidence || hasAttachment(o)) && (!plan || plan.met) && reinspectionMet,
+    notices,
     requiresApproval: t.conclusion.criterion === 'aprovacao',
   };
 }
@@ -123,7 +154,7 @@ export function usersWithPermission(db: Readonly<DemoDatabase>, permission: Perm
 export function reevaluateOccurrence(rt: ServiceRuntime, draft: DemoDatabase, o: Occurrence): void {
   if (o.status === 'concluida') return;
   const t = draft.occurrenceTypes.find((x) => x.id === o.typeId)!;
-  const check = conclusionCheck(o, t, linkedPlans(draft, o.id));
+  const check = conclusionCheck(o, t, linkedPlans(draft, o.id), reinspectionsOf(draft, o.id));
   const eligible = hasTypeConditions(t) && check.baseMet && check.typeMet;
   const at = rt.now().toISOString();
   if (eligible && !o.eligible) {
@@ -150,6 +181,149 @@ export function reevaluateOccurrence(rt: ServiceRuntime, draft: DemoDatabase, o:
     o.history.push({ at, actorUserId: 'sistema', kind: 'automatico', text: `Deixou de atender às condições de conclusão${pending.length ? `: ${pending.join('; ')}` : ''}.` });
   }
   o.eligible = eligible;
+}
+
+function pushNotification(rt: ServiceRuntime, draft: DemoDatabase, o: Occurrence, title: string, message: string, recipients: Id[], exclude?: Id) {
+  const list = Array.from(new Set(recipients.filter((r) => r !== exclude)));
+  if (!list.length) return;
+  draft.notifications.push({
+    id: rt.newId('n'),
+    moduleId: 'ocorrencias',
+    type: 'tarefa',
+    severity: 'informativa',
+    important: false,
+    title,
+    message,
+    locationId: o.locationId,
+    createdAt: rt.now().toISOString(),
+    target: { kind: 'occurrence', id: o.id },
+    readByUserIds: [],
+    recipientUserIds: list,
+  });
+}
+
+/**
+ * D-005 (aprovado com ajustes em D-013): após a sincronização, sugere vínculo
+ * com ocorrências abertas do MESMO TIPO e MESMO LOCAL; ativo coincidente só
+ * aumenta a relevância. Janela temporal configurável e sem padrão — sem
+ * configuração, não há limite de tempo (P-83). Nunca impede nem adia a geração.
+ */
+export function suggestLinks(rt: ServiceRuntime, draft: DemoDatabase, o: Occurrence, extra?: { candidateId: Id; reason: string }): number {
+  const related = new Set(o.relatedOccurrenceIds ?? []);
+  const found = draft.occurrences
+    .filter((c) => c.id !== o.id && c.status !== 'concluida' && c.typeId === o.typeId && c.locationId === o.locationId && !related.has(c.id))
+    .map((c) => {
+      const sameAsset = Boolean(o.assetId && c.assetId === o.assetId);
+      return { candidateId: c.id, reason: `Mesmo tipo e mesmo local${sameAsset ? ' e mesmo ativo' : ''}`, relevance: sameAsset ? 2 : 1 };
+    });
+  if (extra) {
+    const candidate = draft.occurrences.find((c) => c.id === extra.candidateId);
+    const existing = found.find((f) => f.candidateId === extra.candidateId);
+    if (existing) {
+      existing.reason = `${extra.reason}; ${existing.reason.toLowerCase()}`;
+      existing.relevance = 3;
+    } else if (candidate && candidate.status !== 'concluida' && !related.has(candidate.id)) {
+      found.push({ candidateId: candidate.id, reason: extra.reason, relevance: 3 });
+    }
+  }
+  if (!found.length) return 0;
+  found.sort((a, b) => b.relevance - a.relevance);
+  const at = rt.now().toISOString();
+  o.linkSuggestions = [...(o.linkSuggestions ?? []), ...found.map((f) => ({ candidateId: f.candidateId, reason: f.reason, status: 'pendente' as const, at }))];
+  const codes = found.map((f) => draft.occurrences.find((c) => c.id === f.candidateId)?.code).join(', ');
+  o.history.push({ at, actorUserId: 'sistema', kind: 'automatico', text: `Sugestão de vínculo com ${codes} (${found[0]!.reason.toLowerCase()}). Aguarda decisão de usuário autorizado.` });
+  pushNotification(rt, draft, o, `Sugestão de vínculo: ${o.code}`, `Possível relação com ${codes}. Confirme o vínculo ou mantenha a ocorrência independente.`, usersWithPermission(draft, 'ocorrencias.link', o.locationId));
+  return found.length;
+}
+
+/** D-005d: a sugestão expira quando perde a utilidade (ocorrência concluída ou vínculo já existente). */
+export function expireSuggestions(rt: ServiceRuntime, draft: DemoDatabase, occurrenceId: Id, reason: string): void {
+  const at = rt.now().toISOString();
+  for (const o of draft.occurrences) {
+    for (const s of o.linkSuggestions ?? []) {
+      if (s.status === 'pendente' && (o.id === occurrenceId || s.candidateId === occurrenceId)) {
+        s.status = 'expirada';
+        s.expiredReason = reason;
+        const other = draft.occurrences.find((x) => x.id === s.candidateId)?.code;
+        o.history.push({ at, actorUserId: 'sistema', kind: 'automatico', text: `Sugestão de vínculo com ${other} expirada sem decisão: ${reason}.` });
+      }
+    }
+  }
+}
+
+/** Ocorrência gerada por integração existente (não conformidade ou rotina não executada). */
+export function createIntegrationOccurrence(
+  rt: ServiceRuntime,
+  draft: DemoDatabase,
+  input: {
+    typeId: Id;
+    locationId: Id;
+    assetId?: Id;
+    description: string;
+    origin: 'nao-conformidade' | 'rotina-nao-executada';
+    sourceExecutionId: Id;
+    historyText: string;
+    extraCandidate?: { candidateId: Id; reason: string };
+  },
+): Occurrence {
+  const type = draft.occurrenceTypes.find((t) => t.id === input.typeId)!;
+  draft.occurrenceCounter += 1;
+  const at = rt.now().toISOString();
+  const o: Occurrence = {
+    id: rt.newId('oc'),
+    code: `OC-${String(draft.occurrenceCounter).padStart(4, '0')}`,
+    typeId: type.id,
+    locationId: input.locationId,
+    assetId: input.assetId,
+    description: input.description,
+    occurredAt: at,
+    createdAt: at,
+    priority: type.defaultPriority,
+    origin: input.origin,
+    sourceExecutionId: input.sourceExecutionId,
+    registeredByUserId: 'sistema',
+    involvedPersonIds: [],
+    status: 'sem-tratamento',
+    proceedings: [],
+    pauses: [],
+    eligible: false,
+    history: [{ at, actorUserId: 'sistema', kind: 'automatico', text: input.historyText }],
+  };
+  draft.occurrences.push(o);
+  suggestLinks(rt, draft, o, input.extraCandidate);
+  return o;
+}
+
+/**
+ * Resultado da reinspeção na ocorrência original (D-006, DP-15): sempre recebe
+ * resultado e evidências; concluída não é reaberta. N2 no sino.
+ */
+export function recordReinspectionResult(
+  rt: ServiceRuntime,
+  draft: DemoDatabase,
+  request: ReinspectionRequest,
+  info: { result: 'ok' | 'nao-ok'; executionCode: string; executorName: string; evidences: number; newOccurrenceCode?: string },
+): void {
+  const o = draft.occurrences.find((x) => x.id === request.occurrenceId);
+  if (!o) return;
+  const at = rt.now().toISOString();
+  o.history.push({
+    at,
+    actorUserId: 'sistema',
+    kind: 'automatico',
+    text: `Resultado da reinspeção ${info.executionCode}: ${info.result === 'ok' ? 'OK' : 'Não OK'} — executor ${info.executorName}, ${info.evidences} evidência(s)${
+      info.newOccurrenceCode ? `; a não conformidade gerou a ocorrência ${info.newOccurrenceCode} (com sugestão de vínculo)` : ''
+    }${o.status === 'concluida' ? '. Registrado após a conclusão, sem reabertura (DP-15)' : ''}.`,
+  });
+  pushNotification(
+    rt,
+    draft,
+    o,
+    `Reinspeção de ${o.code}: ${info.result === 'ok' ? 'OK' : 'Não OK'}`,
+    o.status === 'concluida' ? 'Registrado no histórico, sem reabertura.' : 'Resultado e evidências disponíveis no histórico da ocorrência.',
+    [request.requestedByUserId, ...usersWithPermission(draft, 'ocorrencias.treat', o.locationId)],
+  );
+  reevaluateOccurrence(rt, draft, o);
 }
 
 /** Gestão de Ocorrências — produto existente preservado + ciclo aprovado (D-009, D-010, D-013). */
@@ -249,6 +423,7 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
     rt.store.mutate((draft) => {
       const o = draft.occurrences.find((x) => x.id === id)!;
       fn(o, draft);
+      if (o.status === 'concluida') expireSuggestions(rt, draft, o.id, `a ocorrência ${o.code} foi concluída`);
       reevaluate(draft, o);
     });
 
@@ -262,7 +437,7 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
     }
   };
 
-  const checkOf = (db: Readonly<DemoDatabase>, o: Occurrence, t: OccurrenceType) => conclusionCheck(o, t, linkedPlans(db, o.id));
+  const checkOf = (db: Readonly<DemoDatabase>, o: Occurrence, t: OccurrenceType) => conclusionCheck(o, t, linkedPlans(db, o.id), reinspectionsOf(db, o.id));
 
   const actionsFor = (db: Readonly<DemoDatabase>, ctx: AccessContext, o: Occurrence, t: OccurrenceType): OccurrenceActions => {
     const perm = permissions(ctx);
@@ -280,6 +455,8 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
         perm.conclude && o.approvalRequest && requester === ctx.user.id ? 'Você pediu a aprovação: outra pessoa com permissão de concluir decide (P-61).' : undefined,
       concludeWithException: perm.exception && check.baseMet && hasTypeConditions(t),
       openMaintenanceRequest: isModuleAvailable(ctx, 'manutencao') && can(ctx, 'manutencao.request') && o.status !== 'concluida',
+      requestReinspection: perm.treat && o.status !== 'concluida' && isModuleAvailable(ctx, 'rotinas'),
+      decideLinks: isModuleAvailable(ctx, 'ocorrencias') && can(ctx, 'ocorrencias.link') && (o.linkSuggestions ?? []).some((x) => x.status === 'pendente'),
     };
   };
 
@@ -290,6 +467,11 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
     if (o.status === 'sem-tratamento' || o.proceedings.length === 0) return 'sem trâmite registrado';
     const plan = planRequirementMet(t, linkedPlans(db, o.id));
     if (plan && !plan.met) return `o tipo ${t.conclusion.requirePlan === 'exige-iniciado' ? 'exige plano de ação iniciado' : 'exige planos de ação concluídos'}: ${plan.detail}`;
+    if (t.conclusion.requireReinspection) {
+      const rs = reinspectionState(reinspectionsOf(db, o.id));
+      if (rs.pending) return 'o tipo exige reinspeção: há reinspeção solicitada aguardando resultado (DP-09)';
+      if (rs.last?.result !== 'ok') return 'o tipo exige reinspeção com último resultado OK';
+    }
     if (t.conclusion.criterion === 'aprovacao') return 'o tipo exige aprovação da conclusão';
     if (t.conclusion.requireJustification && (!input || (input.justification ?? '').trim().length < MIN_TEXT)) {
       return input ? `informe a justificativa de conclusão (mínimo de ${MIN_TEXT} caracteres)` : 'o tipo exige justificativa: conclua individualmente';
@@ -375,6 +557,27 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
         sourceEvent: sourceEvent && canSeeEvent(ctx, sourceEvent) ? sourceEvent : undefined,
         linkedRequests: linked.map((r) => ({ id: r.id, code: r.code, title: r.title, status: r.status })),
         hiddenLinkedRequests: requests.length - linked.length,
+        reinspections: reinspectionsOf(db, o.id).map((r) => ({
+          id: r.id,
+          status: r.status,
+          result: r.result,
+          requestedAt: r.requestedAt,
+          executionId: r.executionId,
+          executionCode: r.executionId ? db.routineExecutions.find((e) => e.id === r.executionId)?.code : undefined,
+        })),
+        suggestions: (o.linkSuggestions ?? []).map((x) => {
+          const c = db.occurrences.find((y) => y.id === x.candidateId);
+          return { candidateId: x.candidateId, code: c?.code ?? '—', typeName: c ? typeOf(db, c).name : '', reason: x.reason, status: x.status, expiredReason: x.expiredReason };
+        }),
+        related: (o.relatedOccurrenceIds ?? []).map((rid) => {
+          const c = db.occurrences.find((y) => y.id === rid);
+          return { id: rid, code: c?.code ?? '—', typeName: c ? typeOf(db, c).name : '', visible: Boolean(c && inScope(ctx, c.locationId)) };
+        }),
+        sourceExecution: (() => {
+          if (!o.sourceExecutionId || !isModuleAvailable(ctx, 'rotinas')) return undefined;
+          const e = db.routineExecutions.find((x) => x.id === o.sourceExecutionId);
+          return e ? { id: e.id, code: e.code } : undefined;
+        })(),
         times: {
           responseMs: o.firstProceedingAt ? new Date(o.firstProceedingAt).getTime() - created : undefined,
           solutionMs: o.conclusion ? new Date(o.conclusion.at).getTime() - created - paused : undefined,
@@ -640,6 +843,77 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
       const o = db.occurrences.find((x) => x.id === id);
       if (!o || !inScope(ctx, o.locationId)) return null;
       return { id: o.id, code: o.code, typeName: typeOf(db, o).name, description: o.description, locationId: o.locationId, assetId: o.assetId };
+    },
+
+    async requestReinspection(ctx, id, input) {
+      await simulateLatency(rt);
+      const { occurrence } = load(ctx, id);
+      requirePerm(ctx, 'treat', 'Seu perfil não trata ocorrências.');
+      if (occurrence.status === 'concluida') throw conflict('Ocorrência concluída.');
+      if (!isModuleAvailable(ctx, 'rotinas')) throw conflict('A reinspeção é executada pela Gestão de Rotinas, que não está disponível.');
+      if (reinspectionsOf(rt.store.getSnapshot(), id).some((r) => r.status === 'pendente' || r.status === 'programada')) {
+        throw conflict('Já existe reinspeção aguardando resultado.');
+      }
+      mutate(id, (o, draft) => {
+        const now = rt.now().toISOString();
+        draft.reinspectionRequests.push({
+          id: rt.newId('rq'),
+          occurrenceId: o.id,
+          requestedByUserId: ctx.user.id,
+          requestedAt: now,
+          suggestedDate: input.suggestedDate || undefined,
+          suggestedChecklistId: input.suggestedChecklistId || undefined,
+          status: 'pendente',
+        });
+        o.history.push(entry('sistema', 'automatico', 'Reinspeção solicitada à Gestão de Rotinas (aguardando programação pelo gestor).'));
+        audit(draft, ctx, 'ocorrencia.reinspecao', o, 'reinspeção solicitada');
+        const managers = usersWith(draft, 'rotinas.manage', o.locationId).filter((m) => m !== ctx.user.id);
+        if (managers.length) {
+          draft.notifications.push({
+            id: rt.newId('n'),
+            moduleId: 'rotinas',
+            type: 'tarefa',
+            severity: 'informativa',
+            important: false,
+            title: `Reinspeção solicitada: ${o.code}`,
+            message: 'Programe a reinspeção como rotina não agendada de execução única.',
+            locationId: o.locationId,
+            createdAt: now,
+            target: { kind: 'module', moduleId: 'rotinas' },
+            readByUserIds: [],
+            recipientUserIds: managers,
+          });
+        }
+      });
+    },
+
+    async decideLinkSuggestion(ctx, id, candidateId, confirm) {
+      await simulateLatency(rt);
+      const { occurrence } = load(ctx, id);
+      if (!can(ctx, 'ocorrencias.link')) throw forbidden('Seu perfil não confirma sugestões de vínculo.');
+      if (!(occurrence.linkSuggestions ?? []).some((x) => x.candidateId === candidateId && x.status === 'pendente')) throw conflict('Sugestão não está mais pendente.');
+      mutate(id, (o, draft) => {
+        const sg = o.linkSuggestions!.find((x) => x.candidateId === candidateId && x.status === 'pendente')!;
+        const other = draft.occurrences.find((x) => x.id === candidateId)!;
+        sg.decidedByUserId = ctx.user.id;
+        if (confirm) {
+          sg.status = 'confirmada';
+          o.relatedOccurrenceIds = Array.from(new Set([...(o.relatedOccurrenceIds ?? []), other.id]));
+          other.relatedOccurrenceIds = Array.from(new Set([...(other.relatedOccurrenceIds ?? []), o.id]));
+          o.history.push(entry(ctx.user.id, 'acao', `Vínculo confirmado com ${other.code}. Os históricos continuam próprios (sem fusão).`));
+          other.history.push(entry('sistema', 'automatico', `Vínculo confirmado com ${o.code} por ${userName(draft, ctx.user.id)}.`));
+          for (const x of other.linkSuggestions ?? []) {
+            if (x.status === 'pendente' && x.candidateId === o.id) {
+              x.status = 'expirada';
+              x.expiredReason = 'vínculo já existente';
+            }
+          }
+        } else {
+          sg.status = 'independente';
+          o.history.push(entry(ctx.user.id, 'acao', `Sugestão de vínculo com ${other.code} recusada: a ocorrência permanece independente.`));
+        }
+        audit(draft, ctx, confirm ? 'ocorrencia.vinculo-confirmar' : 'ocorrencia.vinculo-recusar', o, confirm ? `vínculo com ${other.code}` : 'mantida independente');
+      });
     },
 
     eventPrefill(ctx, eventId) {
