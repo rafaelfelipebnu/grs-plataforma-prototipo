@@ -10,6 +10,7 @@ import {
   type OccurrencePriority,
   type OccurrenceType,
   type Permission,
+  type ActionPlan,
 } from '@/domain';
 import type {
   ConclusionCheck,
@@ -38,15 +39,45 @@ function requireText(value: string | undefined, label: string): string {
   return text;
 }
 
-const hasTypeConditions = (t: OccurrenceType) => t.conclusion.requireEvidence || t.conclusion.requireJustification || t.conclusion.criterion !== 'manual';
+const hasTypeConditions = (t: OccurrenceType) =>
+  t.conclusion.requireEvidence || t.conclusion.requireJustification || t.conclusion.criterion !== 'manual' || t.conclusion.requirePlan !== 'nao-exige';
 const hasAttachment = (o: Occurrence) => o.proceedings.some((p) => p.attachments.length > 0);
+
+/** Planos vinculados à ocorrência (qualquer origem, inclusive vinculados depois — DP-10a). */
+export function linkedPlans(db: Readonly<DemoDatabase>, occurrenceId: Id): ActionPlan[] {
+  return db.actionPlans.filter((p) => p.links.some((l) => l.kind === 'ocorrencia' && l.targetId === occurrenceId));
+}
+
+const STARTED: ActionPlan['status'][] = ['em-andamento', 'aguardando-aprovacao', 'pausado', 'concluido'];
+
+/**
+ * Exigência de plano (DP-10, D-010; DP-10a, D-013):
+ * - "exige plano iniciado": ≥ 1 plano Em andamento, Aguardando aprovação, Pausado ou Concluído;
+ * - "exige plano concluído": ≥ 1 plano e todos os não cancelados Concluídos (Rascunho bloqueia);
+ * - plano Cancelado nunca satisfaz; eficácia não é condição.
+ */
+export function planRequirementMet(t: OccurrenceType, plans: ActionPlan[]): { met: boolean; detail: string } | null {
+  const mode = t.conclusion.requirePlan;
+  if (mode === 'nao-exige') return null;
+  const active = plans.filter((p) => p.status !== 'cancelado');
+  if (mode === 'exige-iniciado') {
+    const met = plans.some((p) => STARTED.includes(p.status));
+    return { met, detail: met ? 'há plano iniciado' : plans.length ? 'nenhum plano iniciado (Rascunho e Cancelado não contam)' : 'nenhum plano vinculado' };
+  }
+  const pending = active.filter((p) => p.status !== 'concluido');
+  const met = active.length > 0 && pending.length === 0;
+  return {
+    met,
+    detail: met ? 'todos os planos não cancelados concluídos' : active.length === 0 ? 'nenhum plano não cancelado vinculado' : `${pending.length} plano(s) ainda não concluído(s), inclusive em Rascunho`,
+  };
+}
 
 /**
  * Regra de conclusão = regra atual do produto + condições configuradas no tipo
  * (DP-04). A regra fica na camada de serviço para valer igualmente no
  * detalhe e em lote (DP-04a).
  */
-export function conclusionCheck(o: Occurrence, t: OccurrenceType): ConclusionCheck {
+export function conclusionCheck(o: Occurrence, t: OccurrenceType, plans: ActionPlan[] = []): ConclusionCheck {
   const conditions: ConclusionCheck['conditions'] = [
     { label: 'Ao menos um trâmite registrado', origin: 'regra-atual', state: o.proceedings.length > 0 ? 'atendida' : 'pendente' },
     { label: 'Não estar em pausa (retome antes de concluir)', origin: 'regra-atual', state: o.status === 'em-pausa' ? 'pendente' : 'atendida' },
@@ -55,15 +86,70 @@ export function conclusionCheck(o: Occurrence, t: OccurrenceType): ConclusionChe
     conditions.push({ label: 'Evidência anexada (em trâmite ou na conclusão)', origin: 'tipo', state: hasAttachment(o) ? 'atendida' : 'na-conclusao' });
   }
   if (t.conclusion.requireJustification) conditions.push({ label: 'Justificativa de conclusão', origin: 'tipo', state: 'na-conclusao' });
+  const plan = planRequirementMet(t, plans);
+  if (plan) {
+    const label = t.conclusion.requirePlan === 'exige-iniciado' ? 'Plano de ação iniciado' : 'Planos de ação concluídos';
+    conditions.push({ label: `${label} (${plan.detail})`, origin: 'tipo', state: plan.met ? 'atendida' : 'pendente' });
+  }
   if (t.conclusion.criterion === 'aprovacao') {
     conditions.push({ label: o.approvalRequest ? 'Aprovação da conclusão (pedido aguardando decisão)' : 'Aprovação da conclusão', origin: 'tipo', state: 'pendente' });
   }
   return {
     conditions,
     baseMet: o.status === 'em-andamento' && o.proceedings.length > 0,
-    typeMet: !t.conclusion.requireEvidence || hasAttachment(o),
+    typeMet: (!t.conclusion.requireEvidence || hasAttachment(o)) && (!plan || plan.met),
     requiresApproval: t.conclusion.criterion === 'aprovacao',
   };
+}
+
+/** Usuários de demonstração com a permissão e o local no escopo. */
+export function usersWithPermission(db: Readonly<DemoDatabase>, permission: Permission, locationId: Id): Id[] {
+  const index = locationIndexOf(db);
+  return db.users
+    .filter((u) => PROFILES[u.profileId].permissions.includes(permission))
+    .filter((u) => {
+      const visible = resolveVisibleLocations(u.scope, index);
+      return visible === 'all' || visible.has(locationId);
+    })
+    .map((u) => u.id);
+}
+
+/**
+ * Reavalia a elegibilidade de conclusão (D-013, ressalva da DP-10a: recalcular
+ * e comunicar quando mudar). Passagem para elegível → N3 no sino de quem pode
+ * concluir (uma vez por destinatário e por ciclo). Perda da elegibilidade →
+ * registro automático no histórico. Ocorrência concluída não é alterada.
+ */
+export function reevaluateOccurrence(rt: ServiceRuntime, draft: DemoDatabase, o: Occurrence): void {
+  if (o.status === 'concluida') return;
+  const t = draft.occurrenceTypes.find((x) => x.id === o.typeId)!;
+  const check = conclusionCheck(o, t, linkedPlans(draft, o.id));
+  const eligible = hasTypeConditions(t) && check.baseMet && check.typeMet;
+  const at = rt.now().toISOString();
+  if (eligible && !o.eligible) {
+    o.history.push({ at, actorUserId: 'sistema', kind: 'automatico', text: 'Passou a atender às condições verificáveis de conclusão do tipo (N3 enviada).' });
+    const recipients = usersWithPermission(draft, 'ocorrencias.conclude', o.locationId);
+    if (recipients.length) {
+      draft.notifications.push({
+        id: rt.newId('n'),
+        moduleId: 'ocorrencias',
+        type: 'tarefa',
+        severity: 'informativa',
+        important: false,
+        title: `${o.code} pode ser concluída`,
+        message: `${t.name}: atende às condições configuradas${check.requiresApproval ? ' — a conclusão depende de aprovação' : ''}. A conclusão continua sendo um ato humano.`,
+        locationId: o.locationId,
+        createdAt: at,
+        target: { kind: 'occurrence', id: o.id },
+        readByUserIds: [],
+        recipientUserIds: recipients,
+      });
+    }
+  } else if (!eligible && o.eligible && o.status === 'em-andamento') {
+    const pending = check.conditions.filter((c) => c.origin === 'tipo' && c.state === 'pendente').map((c) => c.label);
+    o.history.push({ at, actorUserId: 'sistema', kind: 'automatico', text: `Deixou de atender às condições de conclusão${pending.length ? `: ${pending.join('; ')}` : ''}.` });
+  }
+  o.eligible = eligible;
 }
 
 /** Gestão de Ocorrências — produto existente preservado + ciclo aprovado (D-009, D-010, D-013). */
@@ -86,16 +172,7 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
     return db.people.find((p) => p.id === user?.personId)?.name ?? 'Usuário';
   };
 
-  const usersWith = (db: Readonly<DemoDatabase>, permission: Permission, locationId: Id): Id[] => {
-    const index = locationIndexOf(db);
-    return db.users
-      .filter((u) => PROFILES[u.profileId].permissions.includes(permission))
-      .filter((u) => {
-        const visible = resolveVisibleLocations(u.scope, index);
-        return visible === 'all' || visible.has(locationId);
-      })
-      .map((u) => u.id);
-  };
+  const usersWith = usersWithPermission;
 
   const typeOf = (db: Readonly<DemoDatabase>, o: Occurrence) => db.occurrenceTypes.find((t) => t.id === o.typeId)!;
 
@@ -165,25 +242,7 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
     });
   };
 
-  /**
-   * N3 (DP-07, D-013): notifica quem pode concluir quando a ocorrência PASSA a
-   * atender às condições verificáveis do tipo — uma vez por destinatário e por
-   * ciclo. Só para tipos com condições configuradas; Em pausa nunca é elegível.
-   */
-  const reevaluate = (draft: DemoDatabase, o: Occurrence) => {
-    const t = draft.occurrenceTypes.find((x) => x.id === o.typeId)!;
-    const check = conclusionCheck(o, t);
-    const eligible = hasTypeConditions(t) && check.baseMet && check.typeMet;
-    if (eligible && !o.eligible) {
-      o.history.push(entry('sistema', 'automatico', 'Passou a atender às condições verificáveis de conclusão do tipo (N3 enviada).'));
-      notify(draft, o, {
-        title: `${o.code} pode ser concluída`,
-        message: `${t.name}: atende às condições configuradas${check.requiresApproval ? ' — a conclusão depende de aprovação' : ''}. A conclusão continua sendo um ato humano.`,
-        recipients: usersWith(draft, 'ocorrencias.conclude', o.locationId),
-      });
-    }
-    o.eligible = eligible;
-  };
+  const reevaluate = (draft: DemoDatabase, o: Occurrence) => reevaluateOccurrence(rt, draft, o);
 
   /** Altera a ocorrência e reavalia a elegibilidade (N3). */
   const mutate = (id: Id, fn: (o: Occurrence, draft: DemoDatabase) => void) =>
@@ -203,9 +262,11 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
     }
   };
 
-  const actionsFor = (ctx: AccessContext, o: Occurrence, t: OccurrenceType): OccurrenceActions => {
+  const checkOf = (db: Readonly<DemoDatabase>, o: Occurrence, t: OccurrenceType) => conclusionCheck(o, t, linkedPlans(db, o.id));
+
+  const actionsFor = (db: Readonly<DemoDatabase>, ctx: AccessContext, o: Occurrence, t: OccurrenceType): OccurrenceActions => {
     const perm = permissions(ctx);
-    const check = conclusionCheck(o, t);
+    const check = checkOf(db, o, t);
     const requester = o.approvalRequest?.byUserId;
     return {
       proceed: perm.treat && o.status !== 'concluida',
@@ -223,10 +284,12 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
   };
 
   /** Valida a conclusão; devolve o motivo de impedimento ou null. */
-  const blockReason = (o: Occurrence, t: OccurrenceType, input: ConclusionInput | null): string | null => {
+  const blockReason = (db: Readonly<DemoDatabase>, o: Occurrence, t: OccurrenceType, input: ConclusionInput | null): string | null => {
     if (o.status === 'concluida') return 'já concluída';
     if (o.status === 'em-pausa') return 'em pausa: retome antes de concluir (DP-04a)';
     if (o.status === 'sem-tratamento' || o.proceedings.length === 0) return 'sem trâmite registrado';
+    const plan = planRequirementMet(t, linkedPlans(db, o.id));
+    if (plan && !plan.met) return `o tipo ${t.conclusion.requirePlan === 'exige-iniciado' ? 'exige plano de ação iniciado' : 'exige planos de ação concluídos'}: ${plan.detail}`;
     if (t.conclusion.criterion === 'aprovacao') return 'o tipo exige aprovação da conclusão';
     if (t.conclusion.requireJustification && (!input || (input.justification ?? '').trim().length < MIN_TEXT)) {
       return input ? `informe a justificativa de conclusão (mínimo de ${MIN_TEXT} caracteres)` : 'o tipo exige justificativa: conclua individualmente';
@@ -305,8 +368,9 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
         ...item(db, o),
         proceedings: [...o.proceedings].reverse().map((p) => ({ proceeding: p, authorName: userName(db, p.byUserId) })),
         history: [...o.history].reverse().map((h) => ({ at: h.at, actorName: userName(db, h.actorUserId), kind: h.kind, text: h.text })),
-        check: conclusionCheck(o, t),
-        actions: actionsFor(ctx, o, t),
+        check: checkOf(db, o, t),
+        linkedPlans: linkedPlans(db, o.id).map((p) => ({ id: p.id, code: p.code, title: p.title, status: p.status })),
+        actions: actionsFor(db, ctx, o, t),
         involvedPeople: o.involvedPersonIds.map((pid) => db.people.find((p) => p.id === pid)).filter((p): p is NonNullable<typeof p> => Boolean(p)),
         sourceEvent: sourceEvent && canSeeEvent(ctx, sourceEvent) ? sourceEvent : undefined,
         linkedRequests: linked.map((r) => ({ id: r.id, code: r.code, title: r.title, status: r.status })),
@@ -470,7 +534,7 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
       await simulateLatency(rt);
       const { occurrence, type } = load(ctx, id);
       requirePerm(ctx, 'conclude', 'Seu perfil não conclui ocorrências.');
-      const reason = blockReason(occurrence, type, input);
+      const reason = blockReason(rt.store.getSnapshot(), occurrence, type, input);
       if (reason) throw (occurrence.status === 'em-pausa' || occurrence.status === 'concluida' ? conflict : validation)(`Não é possível concluir: ${reason}.`);
       mutate(id, (o, draft) => {
         finishConclusion(o, ctx, input);
@@ -488,7 +552,7 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
       for (const id of ids) {
         const o = db.occurrences.find((x) => x.id === id);
         if (!o || !inScope(ctx, o.locationId)) continue;
-        const reason = blockReason(o, typeOf(db, o), null);
+        const reason = blockReason(db, o, typeOf(db, o), null);
         if (reason) {
           result.kept.push({ id, code: o.code, reason });
           continue;
@@ -509,7 +573,7 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
       requirePerm(ctx, 'conclude', 'Seu perfil não conclui ocorrências.');
       if (type.conclusion.criterion !== 'aprovacao') throw conflict('O tipo não exige aprovação: conclua diretamente.');
       if (occurrence.approvalRequest) throw conflict('Já existe pedido de aprovação aguardando decisão.');
-      if (!conclusionCheck(occurrence, type).baseMet) throw conflict('A ocorrência precisa estar Em andamento, com ao menos um trâmite.');
+      if (!checkOf(rt.store.getSnapshot(), occurrence, type).baseMet) throw conflict('A ocorrência precisa estar Em andamento, com ao menos um trâmite.');
       if (type.conclusion.requireJustification && (input.justification ?? '').trim().length < MIN_TEXT) throw validation('Informe a justificativa de conclusão.');
       if (type.conclusion.requireEvidence && !hasAttachment(occurrence) && !input.evidenceNames.length) throw validation('O tipo exige evidência: anexe ao menos uma.');
       mutate(id, (o, draft) => {
@@ -556,7 +620,7 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
       await simulateLatency(rt);
       const { occurrence, type } = load(ctx, id);
       requirePerm(ctx, 'exception', 'Seu perfil não autoriza exceção de conclusão.');
-      const check = conclusionCheck(occurrence, type);
+      const check = checkOf(rt.store.getSnapshot(), occurrence, type);
       // A exceção não dispensa a DP-04a nem a regra atual do produto (D-013).
       if (occurrence.status === 'em-pausa') throw conflict('Em pausa: retome antes de concluir. A exceção não dispensa a DP-04a.');
       if (!check.baseMet) throw conflict('A exceção só dispensa condições do tipo: a ocorrência precisa estar Em andamento, com ao menos um trâmite.');

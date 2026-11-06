@@ -1,5 +1,5 @@
 import { Alert, Badge, PageHeader, Panel, Stack, tableStyles as t } from '@/components/ui';
-import { CONCLUSION_CRITERION_LABEL } from '@/domain';
+import { CONCLUSION_CRITERION_LABEL, PLAN_REQUIREMENT_LABEL } from '@/domain';
 import { MODULES } from '@/modules/registry';
 import { useAccess } from '@/app/providers/SessionProvider';
 import { useServices } from '@/app/providers/ServicesProvider';
@@ -29,8 +29,7 @@ export function OccurrenceTypesPage() {
       <Stack>
         <Alert tone="info">
           {perm.configure ? 'A edição de tipos ' : 'A configuração de tipos é restrita ao administrador. A edição '}
-          entra em entrega futura; nesta demonstração os tipos são consultados. "Exige plano de ação" e "Exige reinspeção" serão configuráveis com Planos de Ação e Gestão de
-          Rotinas.
+          entra em entrega futura; nesta demonstração os tipos são consultados. "Exige reinspeção" será configurável com Gestão de Rotinas.
         </Alert>
         <Panel title={`Tipos (${types.length})`} flush>
           <div className={t.tableWrap}>
@@ -46,6 +45,7 @@ export function OccurrenceTypesPage() {
                   <th scope="col">Conclusão: evidência</th>
                   <th scope="col">Conclusão: justificativa</th>
                   <th scope="col">Critério de conclusão</th>
+                  <th scope="col">Plano de ação</th>
                 </tr>
               </thead>
               <tbody>
@@ -61,6 +61,7 @@ export function OccurrenceTypesPage() {
                     <td>{yes(x.conclusion.requireEvidence)}</td>
                     <td>{yes(x.conclusion.requireJustification)}</td>
                     <td>{CONCLUSION_CRITERION_LABEL[x.conclusion.criterion]}</td>
+                    <td>{PLAN_REQUIREMENT_LABEL[x.conclusion.requirePlan]}</td>
                   </tr>
                 ))}
               </tbody>

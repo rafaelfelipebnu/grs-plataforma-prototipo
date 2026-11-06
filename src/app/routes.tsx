@@ -39,6 +39,9 @@ import { OccurrenceSearchPage } from '@/modules/ocorrencias/OccurrenceSearchPage
 import { NewOccurrencePage } from '@/modules/ocorrencias/NewOccurrencePage';
 import { OccurrenceDetailPage } from '@/modules/ocorrencias/OccurrenceDetailPage';
 import { OccurrenceTypesPage } from '@/modules/ocorrencias/OccurrenceTypesPage';
+import { PlansListPage } from '@/modules/planos/PlansListPage';
+import { NewPlanPage } from '@/modules/planos/NewPlanPage';
+import { PlanDetailPage } from '@/modules/planos/PlanDetailPage';
 
 /** Endereço antigo de local: a visão por local vive na home da Central. */
 function LocationRedirect() {
@@ -128,6 +131,9 @@ export const appRoutes: RouteObject[] = [
               ...(MODULE_CHILD_ROUTES[m.id] ?? []),
             ],
           })),
+          { path: 'planos', element: <PlansListPage /> },
+          { path: 'planos/novo', element: <NewPlanPage /> },
+          { path: 'planos/:planId', element: <PlanDetailPage /> },
           { path: 'pessoas/:personId', element: <PersonPage /> },
           { path: 'busca', element: <SearchPage /> },
           { path: 'configuracoes', element: <SettingsPage /> },

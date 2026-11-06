@@ -13,6 +13,7 @@ export const paths = {
   maintenanceRequest: (id: string) => `/manutencao/solicitacoes/${id}`,
   workOrder: (id: string) => `/manutencao/os/${id}`,
   occurrence: (id: string) => `/ocorrencias/${id}`,
+  plan: (id: string) => `/planos/${id}`,
 };
 
 /**
@@ -38,6 +39,8 @@ export function resolveTargetPath(target: NavTarget, access: AccessContext, serv
       return paths.workOrder(target.id);
     case 'occurrence':
       return paths.occurrence(target.id);
+    case 'action-plan':
+      return paths.plan(target.id);
     case 'event': {
       const info = services.events.routingInfo(access, target.id);
       if (!info) return null;

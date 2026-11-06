@@ -61,6 +61,10 @@ import type {
   OccurrenceStatus,
   OccurrenceType,
   Proceeding,
+  ActionPlan,
+  EffectivenessResult,
+  PlanAction,
+  PlanStatus,
 } from '@/domain';
 
 /**
@@ -1171,6 +1175,8 @@ export interface OccurrenceDetail extends OccurrenceListItem {
   linkedRequests: LinkedRequestRef[];
   /** Solicitações vinculadas que o usuário não pode ver (sem dados operacionais). */
   hiddenLinkedRequests: number;
+  /** Planos de ação vinculados (capacidade compartilhada). */
+  linkedPlans: { id: Id; code: string; title: string; status: ActionPlan['status'] }[];
   /** Tempo de resposta (registro → 1º trâmite humano) e de solução (descontando pausas). */
   times: { responseMs?: number; solutionMs?: number; pausedMs: number };
   approvalRequestedByName?: string;
@@ -1232,6 +1238,175 @@ export interface OccurrenceService {
   hubSummary(ctx: AccessContext, filter: LocationFilter & { limit?: number }): Promise<OccurrenceHubSummary>;
 }
 
+// ── Planos de Ação (capacidade compartilhada) ────────────────────────
+
+export interface PlanPermissions {
+  /** Capacidade contratada: Ocorrências Avançadas, Gestão de Rotinas ou Gestão de Manutenção [C]. */
+  contracted: boolean;
+  view: boolean;
+  manage: boolean;
+  approve: boolean;
+  evaluate: boolean;
+  execute: boolean;
+}
+
+export type ActionIndicatorKind =
+  | 'plano-pausado'
+  | 'bloqueada'
+  | 'dependencia-cancelada'
+  | 'atrasada'
+  | 'execucao-concluida'
+  | 'os-cancelada'
+  | 'solicitacao-rejeitada'
+  | 'solicitacao-redirecionada'
+  | 'solicitacao-resolvida-sem-os'
+  | 'solicitacao-cancelada'
+  | 'solicitacao-duplicada';
+
+export interface ActionIndicator {
+  kind: ActionIndicatorKind;
+  label: string;
+  /** Indicador de proposta ainda não aprovada (nome ou existência). */
+  provisional?: boolean;
+}
+
+export interface PlanActionView {
+  action: PlanAction;
+  executorName: string;
+  dependsOn: { id: Id; number: number; status: PlanAction['status'] }[];
+  indicators: ActionIndicator[];
+  /** Solicitação referenciada (dados da Manutenção, por consulta). null = sem acesso à Manutenção. */
+  linkedRequest?: { id: Id; code: string; status: RequestStatus; workOrder?: { id: Id; code: string; status: WorkOrderStatus } } | null;
+  can: { start: boolean; conclude: boolean; cancel: boolean; reschedule: boolean; resolveDependency: boolean; linkRequest: boolean; keepOpen: boolean };
+}
+
+export interface PlanListItem {
+  plan: ActionPlan;
+  locationPath: Location[];
+  responsibleName: string;
+  actionsDone: number;
+  actionsTotal: number;
+  /** Indicadores do plano (Vencido, Todas as ações finalizadas, Avaliação atrasada…). */
+  flags: string[];
+}
+
+export interface PlanQuery {
+  /** 'ativos' = não concluídos nem cancelados. */
+  status?: PlanStatus | 'ativos';
+  search?: string;
+  /** Planos em que o usuário é responsável ou executor de ação. */
+  mine?: boolean;
+  locationId?: Id;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface PlanLinkView {
+  occurrenceId: Id;
+  /** null = usuário sem acesso à ocorrência: só a referência, sem conteúdo (D-012). */
+  occurrence: { code: string; typeName: string; status: OccurrenceStatus } | null;
+  referenceCode: string;
+  linkedAt: string;
+  linkedByName: string;
+  justification?: string;
+}
+
+export interface PlanCapabilities {
+  edit: boolean;
+  addAction: boolean;
+  activate: boolean;
+  pause: boolean;
+  resume: boolean;
+  conclude: boolean;
+  decideApproval: boolean;
+  cancel: boolean;
+  reschedule: boolean;
+  linkOccurrence: boolean;
+  evaluate: boolean;
+  decideEvaluation: boolean;
+  createRelated: boolean;
+}
+
+export interface PlanDetail extends PlanListItem {
+  actions: PlanActionView[];
+  links: PlanLinkView[];
+  history: { at: string; actorName: string; text: string }[];
+  relatedPlan?: { id: Id; code: string };
+  followUpPlans: { id: Id; code: string; status: PlanStatus }[];
+  approverName?: string;
+  evaluatorName?: string;
+  evaluationApproverName?: string;
+  originOccurrenceCode?: string;
+  /** O que falta para ativar / concluir (mensagens de pendência). */
+  activationMissing: string[];
+  conclusionMissing: string[];
+  can: PlanCapabilities;
+}
+
+export interface NewPlanInput {
+  title: string;
+  objective: string;
+  locationId: Id;
+  assetId?: Id;
+  responsibleUserId: Id;
+  dueDate: string;
+  approvalMode: 'nenhuma' | 'final';
+  approverUserId?: Id;
+  evaluatorUserId?: Id;
+  evaluationDueDate?: string;
+  evaluationApproverUserId?: Id;
+  occurrenceId?: Id;
+  /** Justificativa do vínculo — obrigatória para ocorrência concluída (DP-08). */
+  linkJustification?: string;
+  relatedPlanId?: Id;
+}
+
+export interface NewActionInput {
+  description: string;
+  executorUserId: Id;
+  dueDate: string;
+  dependsOn: Id[];
+}
+
+export interface PlanPersonOption {
+  userId: Id;
+  name: string;
+}
+
+export interface PlanService {
+  permissions(ctx: AccessContext): PlanPermissions;
+  list(ctx: AccessContext, query: PlanQuery): Promise<Paged<PlanListItem>>;
+  get(ctx: AccessContext, id: Id): Promise<PlanDetail>;
+  /** Pessoas com a permissão de planos e o local no escopo. */
+  peopleOptions(ctx: AccessContext, locationId: Id, role: 'manage' | 'approve' | 'evaluate' | 'execute'): PlanPersonOption[];
+  /** Solicitações de manutenção no escopo, para vincular a uma ação (DP-33). */
+  requestOptions(ctx: AccessContext): { id: Id; code: string; title: string }[];
+  /** Ocorrências no escopo que podem ser vinculadas. */
+  occurrenceOptions(ctx: AccessContext): { id: Id; code: string; typeName: string; status: OccurrenceStatus }[];
+  create(ctx: AccessContext, input: NewPlanInput): Promise<ActionPlan>;
+  addAction(ctx: AccessContext, planId: Id, input: NewActionInput): Promise<void>;
+  activate(ctx: AccessContext, planId: Id): Promise<void>;
+  pause(ctx: AccessContext, planId: Id, reason: string): Promise<void>;
+  resume(ctx: AccessContext, planId: Id): Promise<void>;
+  conclude(ctx: AccessContext, planId: Id): Promise<void>;
+  decideApproval(ctx: AccessContext, planId: Id, approve: boolean, reason: string): Promise<void>;
+  cancel(ctx: AccessContext, planId: Id, reason: string): Promise<void>;
+  reschedule(ctx: AccessContext, planId: Id, dueDate: string, reason: string): Promise<void>;
+  setEvaluation(ctx: AccessContext, planId: Id, input: { evaluatorUserId: Id; evaluationDueDate: string; evaluationApproverUserId?: Id }): Promise<void>;
+  linkOccurrence(ctx: AccessContext, planId: Id, occurrenceId: Id, justification?: string): Promise<void>;
+  startAction(ctx: AccessContext, planId: Id, actionId: Id): Promise<void>;
+  concludeAction(ctx: AccessContext, planId: Id, actionId: Id, input: { notes: string; evidences: string[] }): Promise<void>;
+  cancelAction(ctx: AccessContext, planId: Id, actionId: Id, reason: string): Promise<void>;
+  rescheduleAction(ctx: AccessContext, planId: Id, actionId: Id, dueDate: string, reason: string): Promise<void>;
+  /** Dependência cancelada (DP-32): remover ou substituir, com permissão, justificativa e histórico. */
+  resolveDependency(ctx: AccessContext, planId: Id, actionId: Id, input: { dependencyId: Id; mode: 'remover' | 'substituir'; replacementId?: Id; justification: string }): Promise<void>;
+  linkRequest(ctx: AccessContext, planId: Id, actionId: Id, requestId: Id): Promise<void>;
+  /** DP-33: o executor mantém a ação aberta após o desfecho da execução vinculada, com justificativa. */
+  keepActionOpen(ctx: AccessContext, planId: Id, actionId: Id, reason: string): Promise<void>;
+  evaluate(ctx: AccessContext, planId: Id, input: { result: EffectivenessResult; justification: string }): Promise<void>;
+  decideEvaluation(ctx: AccessContext, planId: Id, approve: boolean, reason: string): Promise<void>;
+}
+
 export interface Services {
   session: SessionService;
   locations: LocationService;
@@ -1249,5 +1424,6 @@ export interface Services {
   dashboards: DashboardService;
   maintenance: MaintenanceService;
   occurrences: OccurrenceService;
+  plans: PlanService;
   demo: DemoService;
 }

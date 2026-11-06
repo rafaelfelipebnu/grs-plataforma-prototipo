@@ -17,7 +17,7 @@ describe('entrada e shell', () => {
   it('sidebar segue a ordem oficial e oculta módulos sem permissão do perfil', async () => {
     renderApp({ path: '/', userId: 'u-admin' });
     const menu = await screen.findByRole('complementary', { name: 'Menu principal' });
-    const labels = within(within(menu).getByRole('navigation'))
+    const labels = within(within(menu).getByRole('navigation', { name: 'Módulos' }))
       .getAllByRole('link')
       .map((a) => a.textContent?.trim());
     expect(labels).toEqual([

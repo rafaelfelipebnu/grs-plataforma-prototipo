@@ -383,6 +383,23 @@ Hipóteses adotadas **só para demonstrar o fluxo**; não são decisões aprovad
 | P-68 | Validação do registro | Obrigatórios: tipo, local físico, descrição (mín. 5 caracteres), data/horário (não futura) e prioridade (sugerida pelo tipo). A obrigatoriedade real não está documentada (G-O-01). | G-O-01 em aberto | `register` |
 | P-69 | Recorte por local | Painel e Consulta respeitam a localização contextual do cabeçalho (como P-14). | P-14 | `OccurrencePanelPage.tsx`, `OccurrenceSearchPage.tsx` |
 
+## Comportamentos provisórios (etapa 5 — Planos de Ação, 3ª entrega) — a validar
+
+Hipóteses adotadas **só para demonstrar o fluxo**; não são decisões aprovadas. Regras aprovadas aplicadas: D-010 (DP-10), D-011 (DP-25 diretriz, DP-33), D-012 (DP-23, DP-24, DP-26, DP-32, DP-33 precisada, DP-34), D-013 (DP-08, DP-10a com ressalva, eficácia, matriz demonstrativa).
+
+| # | Tema | Comportamento provisório (hipótese) | Base | Onde alterar |
+|---|------|--------------------------|------|--------------|
+| P-70 | Arquitetura e navegação | "Planos de ação" é uma área própria, no grupo **Capacidades compartilhadas** do menu (fora da lista oficial de módulos), com serviço e permissões próprias: `planos.view`, `planos.manage`, `planos.approve`, `planos.evaluate`, `planos.execute`. Distribuição pela matriz demonstrativa (D-013): Administrador, Gestor de Segurança e Gestor Local — todas; Gestor de Manutenção — consultar, gerir e executar; Técnico e Operador de Rotinas — consultar e executar. Escopo pelo local do plano. Sem acesso à ocorrência vinculada, o plano mostra só o código dela. Habilitada com Ocorrências Avançadas, Rotinas ou Manutenção contratada [C]. | DP-25 (diretriz); arquitetura da seção 2 em proposta | `src/shell/Sidebar.tsx`, `planService.ts`, `src/access/profiles.ts` |
+| P-71 | Modos de aprovação do plano | Só "sem aprovação" ou "aprovação final" (aprovador definido no plano). Aprovação por ação e condicional não estão no protótipo. | Modos [C]; parâmetros em aberto | `ActionPlan.approvalMode` |
+| P-72 | Plano relacionado | Nasce em Rascunho, referencia o anterior e sugere (com confirmação) o vínculo com a primeira ocorrência do plano anterior. | DP-23 aprovado; herança de vínculos em proposta | `NewPlanPage.tsx`, `create` |
+| P-73 | Pausa do plano | Pausado: nenhuma ação inicia, conclui ou é cancelada (retomar antes); não se criam ações; reprogramar prazos continua permitido. Status individuais preservados; sem status "Pausada" de ação. | Proposta DP-18 com ajuste do P.O. | `planService.ts` |
+| P-74 | Ação × solicitação/OS | A ação referencia uma solicitação **existente** (não abre solicitação a partir da ação). Indicadores para solicitação resolvida sem OS, cancelada ou duplicada seguem a proposta (não aprovados). | DP-33 aprovado; demais desfechos em proposta | `actionView` em `planService.ts` |
+| P-75 | Ciclo-base do plano e da ação | Ativar: prazo global e ≥ 1 ação com executor e prazo. Concluir: todas as ações finalizadas, ≥ 1 concluída, avaliador e data da avaliação. Cancelar: ações abertas viram Canceladas, concluídas preservadas. Iniciar ação exige dependências Concluídas. Ações de gestão (incluir, cancelar, reprogramar, decidir dependência) só pelo responsável do plano. Sem "Aguardando aprovação" por ação. | DP-16 a DP-22, DP-27 a DP-31 em proposta | `planService.ts` |
+| P-76 | Plano em risco e indicadores | Nenhum sinal de risco configurado (DP-26: sem valores padrão), então o indicador não é calculado. Indicadores exibidos: Vencido, Todas as ações finalizadas, Avaliação atrasada. | DP-26 aprovado | `flags` em `planService.ts` |
+| P-77 | Comunicação da mudança de elegibilidade | A ressalva da DP-10a ("comunicar quando mudar") é atendida com a N3 no sino ao passar a elegível e com um registro automático no histórico da ocorrência quando ela deixa de atender. | DP-10a com ressalva | `reevaluateOccurrence` |
+| P-78 | Notificações de planos | Somente no sino: responsável (criação, todas as ações finalizadas, dependência cancelada, decisões), executores (ativação, nova ação), aprovador do plano, avaliador e aprovador da avaliação. | Princípios da DP-07 | `notify` em `planService.ts` |
+| P-79 | Vínculos | Um plano pode ser vinculado a mais de uma ocorrência e não há desvincular. Multiplicidade (DP-25a) e vincular/desvincular (DP-25b) são orientações para análise futura, não aprovadas. | DP-25a/b em orientação | `linkOccurrence` |
+
 ## Dúvidas em aberto
 
 Não bloqueiam a etapa 1. Precisam de definição antes das etapas indicadas.

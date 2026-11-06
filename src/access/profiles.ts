@@ -30,6 +30,11 @@ const ALL_PERMISSIONS: Permission[] = [
   'ocorrencias.conclude',
   'ocorrencias.exception',
   'ocorrencias.configure',
+  'planos.view',
+  'planos.manage',
+  'planos.approve',
+  'planos.evaluate',
+  'planos.execute',
   'riscos.view',
   'riscos.manage',
   'pessoas.view',
@@ -49,7 +54,7 @@ export const PROFILES: Record<ProfileId, Profile> = {
     name: 'Gestor de Segurança',
     description:
       'Persona principal. Acompanha a consciência situacional, reconhece alertas e coordena a resposta a ocorrências.',
-    permissions: [
+    permissions: ['planos.view', 'planos.manage', 'planos.approve', 'planos.evaluate', 'planos.execute', 
       'hub.view',
       'hub.events.acknowledge',
       'central.view',
@@ -71,7 +76,7 @@ export const PROFILES: Record<ProfileId, Profile> = {
     name: 'Gestor Local',
     description:
       'Responde pela operação de uma unidade: valida associações, gerencia ativos e rotinas locais dentro do seu escopo.',
-    permissions: [
+    permissions: ['planos.view', 'planos.manage', 'planos.approve', 'planos.evaluate', 'planos.execute', 
       'hub.view',
       'hub.events.acknowledge',
       'central.view',
@@ -95,7 +100,7 @@ export const PROFILES: Record<ProfileId, Profile> = {
     name: 'Gestor de Manutenção',
     description:
       'Faz triagem, priorização e autorização de solicitações e planeja ordens de serviço.',
-    permissions: [
+    permissions: ['planos.view', 'planos.manage', 'planos.execute', 
       'central.view',
       'monitor.view',
       'rotinas.view',
@@ -110,13 +115,13 @@ export const PROFILES: Record<ProfileId, Profile> = {
     id: 'tecnico',
     name: 'Técnico',
     description: 'Executa ordens de serviço atribuídas e registra a execução e as evidências.',
-    permissions: ['central.view', 'manutencao.view', 'manutencao.request', 'manutencao.execute'],
+    permissions: ['planos.view', 'planos.execute', 'central.view', 'manutencao.view', 'manutencao.request', 'manutencao.execute'],
   },
   'operador-rotinas': {
     id: 'operador-rotinas',
     name: 'Operador de Rotinas',
     description: 'Executa rotinas e checklists em campo, inclusive pelo aplicativo móvel.',
-    permissions: ['rotinas.view', 'rotinas.execute'],
+    permissions: ['rotinas.view', 'rotinas.execute', 'planos.view', 'planos.execute'],
   },
 };
 

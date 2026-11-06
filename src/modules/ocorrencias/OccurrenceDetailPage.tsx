@@ -14,6 +14,7 @@ import { ContextLink, useContextNavigation, usePageLabel } from '@/app/navigatio
 import { paths } from '@/app/navigation/targets';
 import { QueryBoundary } from '@/pages/QueryBoundary';
 import { OccurrenceNav, OccurrencePriorityBadge, OccurrenceStatusBadge, occurrencePaths, occurrenceStyles as s } from './shared';
+import { PlanStatusBadge, planPaths } from '@/modules/planos/shared';
 
 type Dialog = 'pausar' | 'prioridade' | 'concluir' | 'pedir-aprovacao' | 'aprovar' | 'recusar' | 'excecao' | null;
 
@@ -195,6 +196,8 @@ function DetailView({ d }: { d: OccurrenceDetail }) {
 
             <ProceedingsPanel d={d} />
 
+            <PlansPanel d={d} />
+
             {(d.linkedRequests.length > 0 || d.hiddenLinkedRequests > 0) && (
               <Panel title="Solicitações de manutenção">
                 {d.linkedRequests.map((r) => (
@@ -345,6 +348,50 @@ function ConclusionPanel({ d }: { d: OccurrenceDetail }) {
       {(t.requireEvidence || t.requireJustification || t.criterion !== 'manual') && (
         <ProvisionalTag code="P-62">Aplicação das condições provisória</ProvisionalTag>
       )}
+    </Panel>
+  );
+}
+
+/** Planos de ação vinculados (capacidade compartilhada): ciclos independentes da ocorrência. */
+function PlansPanel({ d }: { d: OccurrenceDetail }) {
+  const access = useAccess();
+  const services = useServices();
+  const { navigateWithContext } = useContextNavigation();
+  const plans = services.plans.permissions(access);
+  if (!plans.view) return null;
+  if (!plans.contracted) {
+    return (
+      <Panel title="Planos de ação">
+        <p className="helper">Planos de ação são habilitados por Ocorrências Avançadas, Gestão de Rotinas ou Gestão de Manutenção.</p>
+      </Panel>
+    );
+  }
+  const o = d.occurrence;
+  const canCreate = plans.manage && services.occurrences.permissions(access).treat;
+  return (
+    <Panel
+      title={`Planos de ação (${d.linkedPlans.length})`}
+      actions={
+        canCreate ? (
+          <Button size="small" variant="secondary" icon="plus" onClick={() => navigateWithContext(planPaths.create({ ocorrencia: o.id }))}>
+            Criar plano
+          </Button>
+        ) : undefined
+      }
+    >
+      {d.linkedPlans.length === 0 ? (
+        <p className="helper">Nenhum plano vinculado.</p>
+      ) : (
+        d.linkedPlans.map((p) => (
+          <div key={p.id} style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '4px 0' }}>
+            <ContextLink to={planPaths.detail(p.id)}>{p.code}</ContextLink> — {p.title} <PlanStatusBadge value={p.status} />
+          </div>
+        ))
+      )}
+      <p className="helper" style={{ marginTop: 8 }}>
+        Planos têm ciclo próprio: concluir a ocorrência não conclui nem cancela planos, e concluir um plano não conclui a ocorrência.
+        {o.status === 'concluida' && ' Vincular plano a ocorrência concluída exige justificativa e não reabre a ocorrência (DP-08).'}
+      </p>
     </Panel>
   );
 }

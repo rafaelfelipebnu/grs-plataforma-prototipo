@@ -1,4 +1,5 @@
 import type { Id, ISODateString } from './common';
+import type { PlanRequirement } from './actionPlan';
 
 /**
  * Gestão de Ocorrências — produto EXISTENTE (docs/referencias, seção 2),
@@ -70,6 +71,8 @@ export interface OccurrenceType {
     requireEvidence: boolean;
     requireJustification: boolean;
     criterion: ConclusionCriterion;
+    /** Exigência de plano de ação (DP-10). Ausente ou 'nao-exige' = regra atual. */
+    requirePlan: PlanRequirement;
   };
 }
 

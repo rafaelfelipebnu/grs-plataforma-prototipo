@@ -28,6 +28,7 @@ import type {
   WorkOrder,
   Occurrence,
   OccurrenceType,
+  ActionPlan,
 } from '@/domain';
 
 /**
@@ -73,6 +74,9 @@ export interface DemoDatabase {
   occurrenceTypes: OccurrenceType[];
   occurrences: Occurrence[];
   occurrenceCounter: number;
+  // Planos de Ação (capacidade compartilhada GRS)
+  actionPlans: ActionPlan[];
+  planCounter: number;
   // Gestão de Manutenção
   maintenanceRequests: MaintenanceRequest[];
   workOrders: WorkOrder[];
@@ -99,4 +103,4 @@ export interface DemoDatabase {
 }
 
 /** Incrementar quando o formato mudar: dados persistidos antigos são descartados. */
-export const DEMO_SCHEMA_VERSION = 6;
+export const DEMO_SCHEMA_VERSION = 7;

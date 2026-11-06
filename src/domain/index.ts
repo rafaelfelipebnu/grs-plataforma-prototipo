@@ -15,3 +15,4 @@ export * from './group';
 export * from './monitor';
 export * from './maintenance';
 export * from './occurrence';
+export * from './actionPlan';

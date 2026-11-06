@@ -7,27 +7,31 @@ import type { ISODateString, Occurrence, OccurrenceType } from '@/domain';
 export const DEMO_OCCURRENCE_TYPES: OccurrenceType[] = [
   {
     id: 'tp-vidro', name: 'Vidro quebrado', defaultPriority: 'media', monitored: false, warningSound: false,
-    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual' },
+    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'nao-exige' },
   },
   {
     id: 'tp-vazamento', name: 'Vazamento', defaultPriority: 'alta', monitored: true, warningSound: false,
-    notifiedEmails: ['facilities@aurora-demo.invalid'], conclusion: { requireEvidence: true, requireJustification: false, criterion: 'manual' },
+    notifiedEmails: ['facilities@aurora-demo.invalid'], conclusion: { requireEvidence: true, requireJustification: false, criterion: 'manual', requirePlan: 'nao-exige' },
   },
   {
     id: 'tp-acesso', name: 'Acesso indevido', defaultPriority: 'alta', monitored: true, warningSound: true,
-    notifiedEmails: ['seguranca@aurora-demo.invalid'], conclusion: { requireEvidence: false, requireJustification: true, criterion: 'manual' },
+    notifiedEmails: ['seguranca@aurora-demo.invalid'], conclusion: { requireEvidence: false, requireJustification: true, criterion: 'manual', requirePlan: 'nao-exige' },
   },
   {
     id: 'tp-equip-seg', name: 'Falha em equipamento de segurança', defaultPriority: 'critica', monitored: true, warningSound: true,
-    notifiedEmails: ['seguranca@aurora-demo.invalid'], conclusion: { requireEvidence: true, requireJustification: false, criterion: 'aprovacao' },
+    notifiedEmails: ['seguranca@aurora-demo.invalid'], conclusion: { requireEvidence: true, requireJustification: false, criterion: 'aprovacao', requirePlan: 'nao-exige' },
   },
   {
     id: 'tp-ronda', name: 'Irregularidade em ronda', defaultPriority: 'media', monitored: false, warningSound: false,
-    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual' },
+    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'exige-iniciado' },
   },
   {
     id: 'tp-auditoria', name: 'Verificação programada', defaultPriority: 'planejada', monitored: false, warningSound: false,
-    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual' },
+    notifiedEmails: [], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'nao-exige' },
+  },
+  {
+    id: 'tp-desvio', name: 'Desvio de procedimento de segurança', defaultPriority: 'alta', monitored: false, warningSound: false,
+    notifiedEmails: ['seguranca@aurora-demo.invalid'], conclusion: { requireEvidence: false, requireJustification: false, criterion: 'manual', requirePlan: 'exige-concluido' },
   },
 ];
 
@@ -106,6 +110,19 @@ export function createDemoOccurrences(at: (minutesAgo: number) => ISODateString)
       id: 'oc-007', code: 'OC-0007', typeId: 'tp-acesso', locationId: 'loc-cwb-portaria', description: 'Caminhão tentou entrar sem agendamento na portaria de caminhões.',
       occurredAt: at(150), createdAt: at(148), priority: 'alta', origin: 'usuario', registeredByUserId: 'u-admin', status: 'sem-tratamento', proceedings: [],
       history: [{ at: at(148), actorUserId: 'u-admin', kind: 'acao', text: 'Ocorrência registrada — Registro por usuário. Prioridade Alta.' }],
+    },
+    {
+      ...base,
+      id: 'oc-008', code: 'OC-0008', typeId: 'tp-desvio', locationId: 'loc-joi-ind', assetId: 'a-ext12',
+      description: 'Extintor da Linha 1 obstruído por paletes durante a auditoria de segurança; outros pontos com sinalização apagada.',
+      occurredAt: at(5 * 1440), createdAt: at(5 * 1440 - 20), priority: 'alta', origin: 'usuario', registeredByUserId: 'u-seg',
+      status: 'em-andamento', firstProceedingAt: at(5 * 1440 - 60),
+      proceedings: [{ id: 'tr-006', at: at(5 * 1440 - 60), byUserId: 'u-seg', text: 'Paletes removidos na hora. Aberto plano de ação para tratar a causa.', attachments: [] }],
+      history: [
+        { at: at(5 * 1440 - 20), actorUserId: 'u-seg', kind: 'acao', text: 'Ocorrência registrada — Registro por usuário. Prioridade Alta.' },
+        { at: at(5 * 1440 - 60), actorUserId: 'u-seg', kind: 'acao', text: 'Primeiro trâmite registrado: ocorrência Em andamento (tempo de resposta encerrado).' },
+        { at: at(5 * 1440 - 50), actorUserId: 'sistema', kind: 'automatico', text: 'Plano de ação PA-0001 vinculado.' },
+      ],
     },
   ];
 }
