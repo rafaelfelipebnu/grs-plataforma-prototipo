@@ -106,13 +106,13 @@ describe('dashboard do Security Hub', () => {
     const { bundle } = renderApp({ path: '/security-hub', userId: 'u-seg' });
     const ctx = bundle.services.session.resolveAccessContext('u-seg')!;
     await act(async () => {
-      await bundle.services.dashboards.saveMine(ctx, [createWidget('saude-infraestrutura'), createWidget('ocorrencias-abertas')]);
-      await bundle.services.demo.setContract('essencial');
+      await bundle.services.dashboards.saveMine(ctx, [createWidget('saude-infraestrutura'), createWidget('inspecoes-rotinas-pendentes')]);
+      await bundle.services.demo.setContract('operacional');
     });
     const health = await widget('Saúde da infraestrutura');
     expect(within(health).getByText('Monitor de Infraestrutura não contratado')).toBeInTheDocument();
-    const occurrences = await widget('Ocorrências abertas');
-    expect(within(occurrences).getByText('Disponível na etapa 5')).toBeInTheDocument();
+    const routines = await widget('Inspeções e rotinas pendentes');
+    expect(within(routines).getByText('Disponível na etapa 5')).toBeInTheDocument();
   });
 });
 

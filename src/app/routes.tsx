@@ -34,6 +34,11 @@ import { NewRequestPage } from '@/modules/manutencao/NewRequestPage';
 import { RequestDetailPage } from '@/modules/manutencao/RequestDetailPage';
 import { WorkOrderDetailPage } from '@/modules/manutencao/WorkOrderDetailPage';
 import { MyOrderPage, MyOrdersPage } from '@/modules/manutencao/MyOrdersPages';
+import { OccurrencePanelPage } from '@/modules/ocorrencias/OccurrencePanelPage';
+import { OccurrenceSearchPage } from '@/modules/ocorrencias/OccurrenceSearchPage';
+import { NewOccurrencePage } from '@/modules/ocorrencias/NewOccurrencePage';
+import { OccurrenceDetailPage } from '@/modules/ocorrencias/OccurrenceDetailPage';
+import { OccurrenceTypesPage } from '@/modules/ocorrencias/OccurrenceTypesPage';
 
 /** Endereço antigo de local: a visão por local vive na home da Central. */
 function LocationRedirect() {
@@ -47,6 +52,7 @@ const MODULE_INDEX: Partial<Record<ModuleId, JSX.Element>> = {
   central: <CentralHomePage />,
   monitor: <MonitorOverviewPage />,
   manutencao: <MaintenanceHomePage />,
+  ocorrencias: <OccurrencePanelPage />,
 };
 
 /** Rotas de cada módulo (crescem a cada etapa). */
@@ -65,6 +71,12 @@ const MODULE_CHILD_ROUTES: Partial<Record<ModuleId, RouteObject[]>> = {
     { path: 'regras', element: <RulesPage /> },
     { path: 'alertas', element: <MonitorAlertsPage /> },
     { path: 'historico', element: <MonitorHistoryPage /> },
+  ],
+  ocorrencias: [
+    { path: 'consulta', element: <OccurrenceSearchPage /> },
+    { path: 'registrar', element: <NewOccurrencePage /> },
+    { path: 'tipos', element: <OccurrenceTypesPage /> },
+    { path: ':occurrenceId', element: <OccurrenceDetailPage /> },
   ],
   manutencao: [
     { path: 'solicitacoes', element: <RequestsListPage /> },

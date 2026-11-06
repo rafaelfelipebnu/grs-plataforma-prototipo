@@ -79,7 +79,7 @@ export function EventsTab({ params, go }: CentralTabProps) {
       {!isModuleAvailable(access, 'ocorrencias') ? (
         <Alert tone="info">Ocorrências aparecem aqui com a Gestão de Ocorrências contratada.</Alert>
       ) : (
-        <Alert tone="info">Ocorrências serão consolidadas nesta aba quando a Gestão de Ocorrências for implementada (etapa 5).</Alert>
+        <Alert tone="info">As ocorrências deste local estão na Gestão de Ocorrências (Painel e Consulta). A consolidação nesta aba entra em entrega futura.</Alert>
       )}
       <FilterPanel
         applied={applied}

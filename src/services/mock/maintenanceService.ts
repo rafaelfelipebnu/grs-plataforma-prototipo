@@ -345,6 +345,10 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
         if (!asset) errors.push('Ativo inválido.');
         else if (!inScope(ctx, asset.primaryLocationId)) errors.push('O ativo está fora do seu escopo.');
       }
+      const occurrence = input.occurrenceId ? db.occurrences.find((o) => o.id === input.occurrenceId) : undefined;
+      if (input.occurrenceId && (!occurrence || !inScope(ctx, occurrence.locationId) || !isModuleAvailable(ctx, 'ocorrencias'))) {
+        errors.push('Ocorrência de origem inválida.');
+      }
       if (errors.length) throw validation(errors.join(' '));
       let created!: MaintenanceRequest;
       rt.store.mutate((draft) => {
@@ -357,14 +361,25 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
           locationId: input.locationId,
           assetId: input.assetId || undefined,
           perceivedPriority: input.perceivedPriority,
-          origin: input.origin,
+          origin: occurrence ? 'ocorrencia' : input.origin,
+          occurrenceId: occurrence?.id,
           requesterUserId: ctx.user.id,
           createdAt: rt.now().toISOString(),
           status: 'aberta',
           cancelledWorkOrderIds: [],
-          history: [log(ctx, `Solicitação aberta${input.origin === 'painel-ativo' ? ' a partir do painel 360º do ativo' : ''}. Prioridade percebida: ${MAINTENANCE_PRIORITY_LABEL[input.perceivedPriority]}.`)],
+          history: [
+            log(
+              ctx,
+              `Solicitação aberta${occurrence ? ` a partir da ocorrência ${occurrence.code}` : input.origin === 'painel-ativo' ? ' a partir do painel 360º do ativo' : ''}. Prioridade percebida: ${MAINTENANCE_PRIORITY_LABEL[input.perceivedPriority]}.`,
+            ),
+          ],
         };
         draft.maintenanceRequests.push(created);
+        if (occurrence) {
+          // Registro automático na ocorrência (DP-06): não é trâmite humano; não muda status nem tempo de resposta.
+          const o = draft.occurrences.find((x) => x.id === occurrence.id)!;
+          o.history.push({ at: created.createdAt, actorUserId: 'sistema', kind: 'automatico', text: `Solicitação de manutenção ${created.code} aberta a partir desta ocorrência.` });
+        }
         audit(draft, ctx, 'solicitacao.abrir', 'solicitacao', created.id, `${created.code} aberta: ${created.title}`);
         notify(draft, {
           title: `Nova solicitação ${created.code}`,

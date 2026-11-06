@@ -3,6 +3,7 @@ import type { WidgetTypeId } from '@/domain';
 import type { WidgetProps } from './WidgetCard';
 import { CriticalAssetsWidget, InfraHealthWidget, LocationStatusWidget, MapWidget } from './OperationWidgets';
 import { IndicatorsWidget, PendingActionsWidget, PendingModuleWidget, ResponseTimeWidget } from './ManagementWidgets';
+import { OccurrencesByStatusWidget, OpenOccurrencesWidget } from './OccurrenceWidgets';
 import { AccessLiveWidget, AlarmsWidget, CamerasWidget, EventsWidget, HistoryWidget, TelemetryAlertsWidget } from './SecurityWidgets';
 
 /** Componente de cada um dos 17 widgets do catálogo. */
@@ -11,7 +12,7 @@ export const WIDGET_COMPONENTS: Record<WidgetTypeId, ComponentType<WidgetProps>>
   'eventos-alertas': EventsWidget,
   'cameras-destaque': CamerasWidget,
   'alarmes-ativos': AlarmsWidget,
-  'ocorrencias-abertas': PendingModuleWidget,
+  'ocorrencias-abertas': OpenOccurrencesWidget,
   'mapa-operacional': MapWidget,
   'ativos-criticos': CriticalAssetsWidget,
   'saude-infraestrutura': InfraHealthWidget,
@@ -19,7 +20,7 @@ export const WIDGET_COMPONENTS: Record<WidgetTypeId, ComponentType<WidgetProps>>
   'manutencoes-andamento': PendingModuleWidget,
   'inspecoes-rotinas-pendentes': PendingModuleWidget,
   'indicadores-seguranca': IndicatorsWidget,
-  'ocorrencias-por-status': PendingModuleWidget,
+  'ocorrencias-por-status': OccurrencesByStatusWidget,
   'acoes-pendentes': PendingActionsWidget,
   'tempo-medio-resposta': ResponseTimeWidget,
   'historico-eventos': HistoryWidget,

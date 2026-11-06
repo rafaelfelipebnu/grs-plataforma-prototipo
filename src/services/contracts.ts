@@ -55,6 +55,12 @@ import type {
   WorkExecution,
   WorkOrder,
   WorkOrderStatus,
+  Occurrence,
+  OccurrenceOrigin,
+  OccurrencePriority,
+  OccurrenceStatus,
+  OccurrenceType,
+  Proceeding,
 } from '@/domain';
 
 /**
@@ -948,6 +954,8 @@ export interface NewRequestInput {
   assetId?: Id;
   perceivedPriority: MaintenancePriority;
   origin: MaintenanceRequest['origin'];
+  /** Ocorrência de origem (origin = 'ocorrencia'). */
+  occurrenceId?: Id;
 }
 
 export type RequestEditInput = Pick<NewRequestInput, 'title' | 'description' | 'perceivedPriority'>;
@@ -1061,6 +1069,169 @@ export interface MaintenanceService {
   forAsset(ctx: AccessContext, assetId: Id): Promise<{ requests: RequestListItem[]; orders: WorkOrderListItem[] }>;
 }
 
+// ── Gestão de Ocorrências ────────────────────────────────────────────
+
+/** Permissões conceituais separadas (DP-05). Registrar não implica tratar nem concluir. */
+export interface OccurrencePermissions {
+  register: boolean;
+  treat: boolean;
+  conclude: boolean;
+  exception: boolean;
+  configure: boolean;
+}
+
+export interface OccurrenceListItem {
+  occurrence: Occurrence;
+  type: OccurrenceType;
+  asset?: Asset;
+  locationPath: Location[];
+  registeredByName: string;
+  /** Pedido de aprovação de conclusão pendente (indicador, não status — DP-13). */
+  awaitingApproval: boolean;
+}
+
+export interface OccurrenceQuery extends LocationFilter {
+  /** 'abertas' = não concluídas. */
+  status?: OccurrenceStatus | 'abertas';
+  priority?: OccurrencePriority;
+  typeId?: Id;
+  origin?: OccurrenceOrigin;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export type OccurrencePanelColumn = 'sem-tratamento' | 'em-andamento' | 'em-pausa' | 'concluidas-24h';
+
+export interface OccurrencePanel {
+  /** Pendentes (não concluídas) por prioridade, das mais recentes para as mais antigas. */
+  pendingByPriority: Record<OccurrencePriority, OccurrenceListItem[]>;
+  byStatus: Record<OccurrencePanelColumn, OccurrenceListItem[]>;
+}
+
+/** Situação de uma condição de conclusão. */
+export interface ConclusionCondition {
+  label: string;
+  /** 'na-conclusao' = informada no momento de concluir (ex.: justificativa). */
+  state: 'atendida' | 'pendente' | 'na-conclusao';
+  origin: 'regra-atual' | 'tipo';
+}
+
+export interface ConclusionCheck {
+  conditions: ConclusionCondition[];
+  /** Regra atual atendida (status e ≥ 1 trâmite; nunca Em pausa — DP-04a). */
+  baseMet: boolean;
+  /** Condições do tipo verificáveis antes da conclusão atendidas. */
+  typeMet: boolean;
+  requiresApproval: boolean;
+}
+
+export interface OccurrenceActions {
+  proceed: boolean;
+  changePriority: boolean;
+  pause: boolean;
+  resume: boolean;
+  conclude: boolean;
+  requestApproval: boolean;
+  decideApproval: boolean;
+  /** Motivo pelo qual o usuário não pode decidir a aprovação (ex.: foi quem pediu). */
+  decideApprovalBlockedReason?: string;
+  concludeWithException: boolean;
+  openMaintenanceRequest: boolean;
+}
+
+export interface OccurrenceHistoryView {
+  at: string;
+  actorName: string;
+  kind: 'acao' | 'automatico';
+  text: string;
+}
+
+export interface ProceedingView {
+  proceeding: Proceeding;
+  authorName: string;
+}
+
+export interface LinkedRequestRef {
+  id: Id;
+  code: string;
+  title: string;
+  status: RequestStatus;
+}
+
+export interface OccurrenceDetail extends OccurrenceListItem {
+  proceedings: ProceedingView[];
+  history: OccurrenceHistoryView[];
+  check: ConclusionCheck;
+  actions: OccurrenceActions;
+  involvedPeople: Person[];
+  /** Evento de origem, se o usuário puder vê-lo. */
+  sourceEvent?: OperationalEvent;
+  /** Solicitações de manutenção abertas a partir da ocorrência (dados da Manutenção, por consulta). */
+  linkedRequests: LinkedRequestRef[];
+  /** Solicitações vinculadas que o usuário não pode ver (sem dados operacionais). */
+  hiddenLinkedRequests: number;
+  /** Tempo de resposta (registro → 1º trâmite humano) e de solução (descontando pausas). */
+  times: { responseMs?: number; solutionMs?: number; pausedMs: number };
+  approvalRequestedByName?: string;
+  conclusionByName?: string;
+  approvedByName?: string;
+  exceptionAuthorizedByName?: string;
+}
+
+export interface NewOccurrenceInput {
+  typeId: Id;
+  locationId: Id;
+  assetId?: Id;
+  description: string;
+  occurredAt: string;
+  priority: OccurrencePriority;
+  involvedPersonIds: Id[];
+  sourceEventId?: Id;
+}
+
+export interface ConclusionInput {
+  justification?: string;
+  evidenceNames: string[];
+}
+
+export interface OccurrenceBatchResult {
+  done: { id: Id; code: string }[];
+  kept: { id: Id; code: string; reason: string }[];
+}
+
+export interface OccurrenceHubSummary {
+  open: OccurrenceListItem[];
+  counts: Record<OccurrencePanelColumn, number>;
+}
+
+export interface OccurrenceService {
+  permissions(ctx: AccessContext): OccurrencePermissions;
+  types(ctx: AccessContext): OccurrenceType[];
+  panel(ctx: AccessContext, filter: LocationFilter): Promise<OccurrencePanel>;
+  list(ctx: AccessContext, query: OccurrenceQuery): Promise<Paged<OccurrenceListItem>>;
+  get(ctx: AccessContext, id: Id): Promise<OccurrenceDetail>;
+  register(ctx: AccessContext, input: NewOccurrenceInput): Promise<Occurrence>;
+  addProceeding(ctx: AccessContext, id: Id, input: { text: string; attachments: string[] }): Promise<void>;
+  /** Trâmite em lote ("Tratar ocorrências"): permitido enquanto não concluída. */
+  addProceedingBatch(ctx: AccessContext, ids: Id[], text: string): Promise<OccurrenceBatchResult>;
+  changePriority(ctx: AccessContext, id: Id, priority: OccurrencePriority): Promise<void>;
+  pause(ctx: AccessContext, id: Id, reason: string): Promise<void>;
+  resume(ctx: AccessContext, id: Id): Promise<void>;
+  conclude(ctx: AccessContext, id: Id, input: ConclusionInput): Promise<void>;
+  /** Conclusão em lote: as que não atendem ficam abertas, identificadas com o motivo (DP-14). */
+  concludeBatch(ctx: AccessContext, ids: Id[]): Promise<OccurrenceBatchResult>;
+  requestApproval(ctx: AccessContext, id: Id, input: ConclusionInput): Promise<void>;
+  decideApproval(ctx: AccessContext, id: Id, approve: boolean, reason: string): Promise<void>;
+  concludeWithException(ctx: AccessContext, id: Id, justification: string): Promise<void>;
+  /** Dados do evento para pré-preencher o registro (origem preservada). */
+  eventPrefill(ctx: AccessContext, eventId: Id): { event: OperationalEvent; locationId: Id; assetId?: Id } | null;
+  /** Dados da ocorrência para pré-preencher uma solicitação de manutenção (origem preservada). */
+  requestPrefill(ctx: AccessContext, id: Id): { id: Id; code: string; typeName: string; description: string; locationId: Id; assetId?: Id } | null;
+  /** Resumo para os widgets do Security Hub. */
+  hubSummary(ctx: AccessContext, filter: LocationFilter & { limit?: number }): Promise<OccurrenceHubSummary>;
+}
+
 export interface Services {
   session: SessionService;
   locations: LocationService;
@@ -1077,5 +1248,6 @@ export interface Services {
   discovery: DiscoveryReviewService;
   dashboards: DashboardService;
   maintenance: MaintenanceService;
+  occurrences: OccurrenceService;
   demo: DemoService;
 }

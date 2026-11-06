@@ -12,6 +12,7 @@ export const paths = {
   search: (q: string) => `/busca?q=${encodeURIComponent(q)}`,
   maintenanceRequest: (id: string) => `/manutencao/solicitacoes/${id}`,
   workOrder: (id: string) => `/manutencao/os/${id}`,
+  occurrence: (id: string) => `/ocorrencias/${id}`,
 };
 
 /**
@@ -35,6 +36,8 @@ export function resolveTargetPath(target: NavTarget, access: AccessContext, serv
       return paths.maintenanceRequest(target.id);
     case 'work-order':
       return paths.workOrder(target.id);
+    case 'occurrence':
+      return paths.occurrence(target.id);
     case 'event': {
       const info = services.events.routingInfo(access, target.id);
       if (!info) return null;

@@ -11,6 +11,7 @@ import { createDemoRules } from './network';
 import { DEMO_COMPANY, DEMO_LOCATIONS, DEMO_ORG_LOCATION_MAPPINGS, DEMO_ORG_UNITS } from './organization';
 import { DEMO_PEOPLE, DEMO_USERS } from './people';
 import { DEMO_REDIRECT_DESTINATIONS, createDemoMaintenance } from './maintenance';
+import { DEMO_OCCURRENCE_TYPES, createDemoOccurrences } from './occurrences';
 
 /**
  * Cria o cenário de demonstração. Os horários são relativos a `now` para que
@@ -44,6 +45,9 @@ export function createDemoSeed(now: Date = new Date()): DemoDatabase {
     discoveryCandidates: [],
     monitoringRules: createDemoRules(at),
     pointReadings: [],
+    occurrenceTypes: DEMO_OCCURRENCE_TYPES,
+    occurrences: createDemoOccurrences(at),
+    occurrenceCounter: 7,
     maintenanceRequests: maintenance.requests,
     workOrders: maintenance.orders,
     redirectDestinations: DEMO_REDIRECT_DESTINATIONS,

@@ -146,7 +146,15 @@ function RequestView({ d }: { d: RequestDetail }) {
                 <LabelValue label="Prioridade definida">{r.definedPriority ? <PriorityBadge value={r.definedPriority} /> : 'Definida na triagem'}</LabelValue>
                 <LabelValue label="Solicitante">{d.requesterName}</LabelValue>
                 <LabelValue label="Aberta em">{formatDateTime(r.createdAt)}</LabelValue>
-                <LabelValue label="Origem">{r.origin === 'painel-ativo' ? 'Painel 360º do ativo' : 'Abertura manual'}</LabelValue>
+                <LabelValue label="Origem">
+                  {r.origin === 'ocorrencia' && r.occurrenceId ? (
+                    <ContextLink to={paths.occurrence(r.occurrenceId)}>Ocorrência de origem</ContextLink>
+                  ) : r.origin === 'painel-ativo' ? (
+                    'Painel 360º do ativo'
+                  ) : (
+                    'Abertura manual'
+                  )}
+                </LabelValue>
                 <LabelValue label="Triagem">{d.triageName ?? '—'}</LabelValue>
                 <LabelValue label="Local">
                   <LocationPath path={d.locationPath} />

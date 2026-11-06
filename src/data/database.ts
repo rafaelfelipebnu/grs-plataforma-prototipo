@@ -26,6 +26,8 @@ import type {
   MaintenanceRequest,
   RedirectDestination,
   WorkOrder,
+  Occurrence,
+  OccurrenceType,
 } from '@/domain';
 
 /**
@@ -67,6 +69,10 @@ export interface DemoDatabase {
   discoveryCandidates: DiscoveryCandidate[];
   monitoringRules: MonitoringRule[];
   pointReadings: PointReading[];
+  // Gestão de Ocorrências
+  occurrenceTypes: OccurrenceType[];
+  occurrences: Occurrence[];
+  occurrenceCounter: number;
   // Gestão de Manutenção
   maintenanceRequests: MaintenanceRequest[];
   workOrders: WorkOrder[];
@@ -93,4 +99,4 @@ export interface DemoDatabase {
 }
 
 /** Incrementar quando o formato mudar: dados persistidos antigos são descartados. */
-export const DEMO_SCHEMA_VERSION = 5;
+export const DEMO_SCHEMA_VERSION = 6;

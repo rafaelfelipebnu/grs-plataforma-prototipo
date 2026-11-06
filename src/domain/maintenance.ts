@@ -115,7 +115,9 @@ export interface MaintenanceRequest {
   perceivedPriority: MaintenancePriority;
   /** Prioridade definida pela triagem. */
   definedPriority?: MaintenancePriority;
-  origin: 'manual' | 'painel-ativo';
+  origin: 'manual' | 'painel-ativo' | 'ocorrencia';
+  /** Ocorrência de origem (origem preservada; Manutenção não altera a ocorrência). */
+  occurrenceId?: Id;
   requesterUserId: Id;
   createdAt: ISODateString;
   status: RequestStatus;

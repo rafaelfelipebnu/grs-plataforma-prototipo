@@ -37,10 +37,15 @@ export function NewRequestPage() {
   }, [services, access]);
 
   const fromAsset = assets.find((a) => a.id === sp.get('ativo'));
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [locationId, setLocationId] = useState(fromAsset?.primaryLocationId ?? '');
-  const [assetId, setAssetId] = useState(fromAsset?.id ?? '');
+  const occurrenceParam = sp.get('ocorrencia');
+  const fromOccurrence = useMemo(
+    () => (occurrenceParam ? services.occurrences.requestPrefill(access, occurrenceParam) : null),
+    [occurrenceParam, services, access],
+  );
+  const [title, setTitle] = useState(fromOccurrence ? `${fromOccurrence.typeName} — ${fromOccurrence.code}` : '');
+  const [description, setDescription] = useState(fromOccurrence?.description ?? '');
+  const [locationId, setLocationId] = useState(fromOccurrence?.locationId ?? fromAsset?.primaryLocationId ?? '');
+  const [assetId, setAssetId] = useState(fromOccurrence?.assetId ?? fromAsset?.id ?? '');
   const [priority, setPriority] = useState<MaintenancePriority>('media');
   const [errors, setErrors] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -72,6 +77,7 @@ export function NewRequestPage() {
         assetId: assetId || undefined,
         perceivedPriority: priority,
         origin: fromAsset && assetId === fromAsset.id ? 'painel-ativo' : 'manual',
+        occurrenceId: fromOccurrence?.id,
       });
       toast.show({ tone: 'success', title: `Solicitação ${created.code} aberta`, message: 'A equipe de manutenção foi avisada para a triagem.' });
       navigate(maintenancePaths.request(created.id), { replace: true });
@@ -108,7 +114,13 @@ export function NewRequestPage() {
         }
       >
         <div className={s.formStack} style={{ maxWidth: 720 }}>
-          {fromAsset && (
+          {fromOccurrence && (
+            <Alert tone="info">
+              Aberta a partir da ocorrência <strong>{fromOccurrence.code}</strong>. A origem fica registrada nos dois módulos; a solicitação não altera o status da
+              ocorrência.
+            </Alert>
+          )}
+          {!fromOccurrence && fromAsset && (
             <Alert tone="info">
               Aberta a partir do painel 360º do ativo <strong>{fromAsset.tag}</strong>. O ativo e o local vêm da Central de Ativos e Ambientes.
             </Alert>

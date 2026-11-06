@@ -366,6 +366,23 @@ Hipóteses adotadas **só para demonstrar o fluxo**. Não são decisões aprovad
 | P-58 | Atraso, tempo e evidências | "Atrasada" = data prevista ultrapassada com a OS Planejada, Em execução ou Suspensa (indicador, não status). Tempo total, suspenso e líquido são informativos, sem desconto de SLA (D-013). Evidências são nomes de arquivo simulados ("+ Adicionar foto"); nenhum arquivo é enviado. | D-013; SLA a definir | `maintenanceService.ts`, `orderActions.tsx` |
 | P-59 | Recorte por local | Visão geral e listas da Manutenção respeitam a localização contextual do cabeçalho (como P-14). | P-14 | `MaintenanceHomePage.tsx`, `MaintenanceListsPages.tsx` |
 
+## Comportamentos provisórios (etapa 5 — Gestão de Ocorrências, 2ª entrega) — a validar
+
+Hipóteses adotadas **só para demonstrar o fluxo**; não são decisões aprovadas. Regras aprovadas aplicadas: D-008 ("Concluir"), D-009 (DP-01, 02, 03, 04, 06, 14), D-010 (DP-04a, DP-05, DP-07, DP-10 — exceto a parte de planos), D-013 (DP-13, N3, exceção, matriz demonstrativa). Planos de ação, reinspeção e sugestão de vínculo (D-005, D-006, DP-08, DP-09, DP-10) entram com Planos de Ação e Gestão de Rotinas.
+
+| # | Tema | Comportamento provisório (hipótese) | Base | Onde alterar |
+|---|------|--------------------------|------|--------------|
+| P-60 | Permissões de Ocorrências | `ocorrencias.manage` foi substituída pelas permissões separadas da DP-05: registrar, tratar, concluir (inclui aprovar conclusão), autorizar exceção e configurar tipo. Distribuição conforme a matriz **demonstrativa** (D-013): Administrador — todas; Gestor de Segurança e Gestor Local — registrar, tratar, concluir, exceção; Gestor de Manutenção — consultar; Técnico e Operador de Rotinas — sem acesso (o registro pelo app de Rotinas entra com Gestão de Rotinas). "Confirmar vínculo" ainda não é usada. | DP-05, matriz demonstrativa | `src/access/profiles.ts` |
+| P-61 | Aprovador da conclusão | Aprova quem tem "concluir" no escopo do local, **exceto quem pediu**. Quem aprova e a segregação seguem em aberto (DP-13). | DP-13 aprovado; aprovador em aberto | `decideApproval` em `occurrenceService.ts` |
+| P-62 | Condições do tipo na conclusão | Evidência exigida é atendida por anexo em trâmite **ou** na conclusão; justificativa exigida é informada no ato de concluir. Em lote, tipos que exigem justificativa, evidência ainda não anexada ou aprovação ficam abertos com o motivo. Exceção: quem tem a permissão conclui dispensando as condições do tipo; pedir e autorizar pela mesma pessoa segue em aberto. | DP-04, DP-14, D-013 | `blockReason`, `concludeWithException` |
+| P-63 | Elegibilidade para a N3 | Elegível = regra atual atendida (Em andamento, ≥ 1 trâmite) + evidência anexada quando exigida. Justificativa (informada no ato) e aprovação não entram no cálculo. Só tipos com condições configuradas. Destinatários: quem tem "concluir" no escopo. | DP-07, D-013 | `reevaluate` |
+| P-64 | Ativo relacionado | Campo opcional no registro, referência à identidade da Central. O produto atual não tem esse campo (tem dispositivo/câmera na API). | Experiência integrada (docs/02) | `NewOccurrencePage.tsx`, `Occurrence.assetId` |
+| P-65 | Origens | No protótipo só se criam ocorrências "Registro por usuário" e "Evento do Security Hub" (este preserva o evento de origem e não altera o status dele). Não conformidade, rotina não executada e dispositivo aparecem apenas nos dados de demonstração, como integrações existentes simuladas. | Q-03, seção 3 | `register`, `src/data/seed/occurrences.ts` |
+| P-66 | Tipos de ocorrência | Somente consulta. Tipos e condições são de demonstração. Monitoramento, aviso sonoro e e-mails do tipo **não são disparados**; o tipo monitorado só gera um registro informativo no histórico. | Notificações existentes inalteradas (DP-07) | `OccurrenceTypesPage.tsx`, seed |
+| P-67 | Trâmite em pausa | Trâmite é permitido em Em pausa (não retoma a ocorrência). A permissão em pausa não está documentada (G-O-07). | G-O-07 em aberto | `addProceeding` |
+| P-68 | Validação do registro | Obrigatórios: tipo, local físico, descrição (mín. 5 caracteres), data/horário (não futura) e prioridade (sugerida pelo tipo). A obrigatoriedade real não está documentada (G-O-01). | G-O-01 em aberto | `register` |
+| P-69 | Recorte por local | Painel e Consulta respeitam a localização contextual do cabeçalho (como P-14). | P-14 | `OccurrencePanelPage.tsx`, `OccurrenceSearchPage.tsx` |
+
 ## Dúvidas em aberto
 
 Não bloqueiam a etapa 1. Precisam de definição antes das etapas indicadas.

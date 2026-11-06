@@ -14,3 +14,4 @@ export * from './dashboard';
 export * from './group';
 export * from './monitor';
 export * from './maintenance';
+export * from './occurrence';

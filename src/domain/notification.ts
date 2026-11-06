@@ -18,7 +18,8 @@ export type NavTarget =
   | { kind: 'person'; id: Id }
   | { kind: 'module'; moduleId: ModuleId }
   | { kind: 'maintenance-request'; id: Id }
-  | { kind: 'work-order'; id: Id };
+  | { kind: 'work-order'; id: Id }
+  | { kind: 'occurrence'; id: Id };
 
 /**
  * Notificação da central compartilhada. LER a notificação (readByUserIds) é
