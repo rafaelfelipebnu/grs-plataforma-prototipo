@@ -34,6 +34,8 @@ export interface OperationalEvent {
   locationId: Id;
   assetId?: Id;
   deviceId?: Id;
+  /** Regra técnica do Monitor que gerou o alerta, quando houver. */
+  ruleId?: Id;
   occurredAt: ISODateString;
   /**
    * Alertas de outros módulos só são destacados no Hub quando afetam a

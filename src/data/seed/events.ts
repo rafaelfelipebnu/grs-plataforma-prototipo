@@ -35,13 +35,13 @@ export function createDemoEvents(at: (minutesAgo: number) => ISODateString): Ope
       id: 'ev-005', code: 'EVT-2026-0401', source: 'monitor', category: 'telemetria', severity: 'media',
       title: 'Temperatura acima do setpoint — Chiller CHL-001',
       description: 'Água gelada de saída a 9,4 °C (setpoint 7 °C).',
-      locationId: 'loc-joi-maquinas', deviceId: 'd-chl001', assetId: 'a-chl001', occurredAt: at(35), status: 'ativo',
+      locationId: 'loc-joi-maquinas', deviceId: 'd-chl001', assetId: 'a-chl001', ruleId: 'rule-chl-saida', occurredAt: at(35), status: 'ativo',
     },
     {
       id: 'ev-006', code: 'EVT-2026-0405', source: 'monitor', category: 'telemetria', severity: 'alta',
       title: 'Temperatura acima do limite — Câmara fria CFR-01',
       description: 'Temperatura interna em −12,5 °C (setpoint −18 °C).',
-      locationId: 'loc-cwb-camara', deviceId: 'd-camfria', assetId: 'a-camfria', occurredAt: at(22), status: 'ativo',
+      locationId: 'loc-cwb-camara', deviceId: 'd-camfria', assetId: 'a-camfria', ruleId: 'rule-cfr-temp', occurredAt: at(22), status: 'ativo',
     },
     {
       id: 'ev-007', code: 'EVT-2026-0377', source: 'controle-acesso', category: 'acesso', severity: 'alta',

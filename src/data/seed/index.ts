@@ -6,8 +6,14 @@ import { DEMO_CONNECTORS, DEMO_DEVICES, createDemoDataPoints, createDemoDeviceHe
 import { createDemoEvents, createDemoNotifications } from './events';
 import { createDemoAccessPassages } from './accessPassages';
 import { createDefaultDashboard } from './dashboard';
+import { createDemoGroupHistory, createDemoGroups } from './groups';
+import { createDemoRules } from './network';
 import { DEMO_COMPANY, DEMO_LOCATIONS, DEMO_ORG_LOCATION_MAPPINGS, DEMO_ORG_UNITS } from './organization';
 import { DEMO_PEOPLE, DEMO_USERS } from './people';
+import { DEMO_REDIRECT_DESTINATIONS, createDemoMaintenance } from './maintenance';
+import { DEMO_OCCURRENCE_TYPES, createDemoOccurrences } from './occurrences';
+import { createDemoActionPlans } from './actionPlans';
+import { createDemoRoutines } from './routines';
 
 /**
  * Cria o cenário de demonstração. Os horários são relativos a `now` para que
@@ -15,6 +21,8 @@ import { DEMO_PEOPLE, DEMO_USERS } from './people';
  */
 export function createDemoSeed(now: Date = new Date()): DemoDatabase {
   const at = (minutesAgo: number): ISODateString => new Date(now.getTime() - minutesAgo * 60_000).toISOString();
+  const maintenance = createDemoMaintenance(at, now);
+  const routines = createDemoRoutines(at);
 
   return structuredClone({
     meta: { schemaVersion: DEMO_SCHEMA_VERSION, seededAt: now.toISOString() },
@@ -30,12 +38,35 @@ export function createDemoSeed(now: Date = new Date()): DemoDatabase {
     classifications: DEMO_CLASSIFICATIONS,
     assets: createDemoAssets(at),
     devices: DEMO_DEVICES,
+    groups: createDemoGroups(at),
+    groupHistory: createDemoGroupHistory(at),
+    centralStats: { duplicatesAvoided: 0 },
     connectors: DEMO_CONNECTORS,
     deviceHealth: createDemoDeviceHealth(at),
     dataPoints: createDemoDataPoints(at),
+    discoveryRuns: [],
+    discoveryCandidates: [],
+    monitoringRules: createDemoRules(at),
+    pointReadings: [],
+    occurrenceTypes: DEMO_OCCURRENCE_TYPES,
+    occurrences: createDemoOccurrences(at),
+    occurrenceCounter: 9,
+    routinePlans: routines.plans,
+    controlPoints: routines.points,
+    checklists: routines.checklists,
+    routines: routines.routines,
+    routineExecutions: routines.executions,
+    reinspectionRequests: routines.reinspections,
+    routineCounter: routines.counter,
+    actionPlans: createDemoActionPlans(at, now),
+    planCounter: 3,
+    maintenanceRequests: maintenance.requests,
+    workOrders: maintenance.orders,
+    redirectDestinations: DEMO_REDIRECT_DESTINATIONS,
+    maintenanceCounters: maintenance.counters,
     events: createDemoEvents(at),
     accessPassages: createDemoAccessPassages(at),
     dashboards: { clientDefault: createDefaultDashboard(at(1440)), personal: {} },
-    demoSettings: { liveSimulation: true },
+    demoSettings: { liveSimulation: true, routinesAppOffline: false },
   } satisfies DemoDatabase);
 }

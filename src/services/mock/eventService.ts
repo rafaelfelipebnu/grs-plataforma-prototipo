@@ -1,10 +1,12 @@
-import { can, isModuleAvailable, type AccessContext } from '@/access';
+import type { AccessContext } from '@/access';
 import type { DemoDatabase } from '@/data/database';
 import type { OperationalEvent } from '@/domain';
 import type { EventDetail, EventService } from '../contracts';
 import { forbidden, notFound, ServiceError } from '../errors';
 import {
+  canAcknowledgeEvent,
   canSeeEvent,
+  eventOwnerModule,
   inScope,
   isSecurityRelevant,
   locationIndexOf,
@@ -23,11 +25,7 @@ function toDetail(ctx: AccessContext, db: Readonly<DemoDatabase>, event: Operati
     device: event.deviceId ? db.devices.find((d) => d.id === event.deviceId) : undefined,
     acknowledgedBy: ackUser ? db.people.find((p) => p.id === ackUser.personId) : undefined,
     securityRelevant,
-    canAcknowledge:
-      event.status === 'ativo' &&
-      securityRelevant &&
-      can(ctx, 'hub.events.acknowledge') &&
-      isModuleAvailable(ctx, 'security-hub'),
+    canAcknowledge: canAcknowledgeEvent(ctx, event),
   };
 }
 
@@ -72,7 +70,7 @@ export function createEventService(rt: ServiceRuntime): EventService {
           id: rt.newId('aud'),
           at: now,
           actorUserId: ctx.user.id,
-          moduleId: 'security-hub',
+          moduleId: isSecurityRelevant(target) ? 'security-hub' : eventOwnerModule(target),
           action: 'evento.reconhecer',
           entityType: 'evento',
           entityId: id,

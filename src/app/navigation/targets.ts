@@ -6,10 +6,15 @@ import type { Services } from '@/services';
 export const paths = {
   asset: (id: string) => `/central/ativos/${id}`,
   device: (id: string) => `/central/dispositivos/${id}`,
-  location: (id: string) => `/central/locais/${id}`,
+  location: (id: string) => `/central?local=${encodeURIComponent(id)}`,
   event: (id: string) => `/security-hub/eventos/${id}`,
   person: (id: string) => `/pessoas/${id}`,
   search: (q: string) => `/busca?q=${encodeURIComponent(q)}`,
+  maintenanceRequest: (id: string) => `/manutencao/solicitacoes/${id}`,
+  workOrder: (id: string) => `/manutencao/os/${id}`,
+  occurrence: (id: string) => `/ocorrencias/${id}`,
+  plan: (id: string) => `/planos/${id}`,
+  routineExecution: (id: string) => `/rotinas/execucoes/${id}`,
 };
 
 /**
@@ -29,6 +34,16 @@ export function resolveTargetPath(target: NavTarget, access: AccessContext, serv
       return paths.person(target.id);
     case 'module':
       return MODULES[target.moduleId].basePath;
+    case 'maintenance-request':
+      return paths.maintenanceRequest(target.id);
+    case 'work-order':
+      return paths.workOrder(target.id);
+    case 'occurrence':
+      return paths.occurrence(target.id);
+    case 'action-plan':
+      return paths.plan(target.id);
+    case 'routine-execution':
+      return paths.routineExecution(target.id);
     case 'event': {
       const info = services.events.routingInfo(access, target.id);
       if (!info) return null;

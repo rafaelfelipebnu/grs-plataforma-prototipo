@@ -16,6 +16,7 @@ function isVisible(ctx: AccessContext, db: Readonly<DemoDatabase>, n: AppNotific
     const event = db.events.find((e) => e.id === targetId);
     return Boolean(event && canSeeEvent(ctx, event));
   }
+  if (n.recipientUserIds && !n.recipientUserIds.includes(ctx.user.id)) return false;
   if (!isModuleAvailable(ctx, n.moduleId)) return false;
   return n.locationId ? inScope(ctx, n.locationId) : true;
 }

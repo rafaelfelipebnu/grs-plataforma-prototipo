@@ -1,4 +1,6 @@
 import type {
+  AssetGroup,
+  GroupHistoryEntry,
   AccessPassage,
   DashboardLayout,
   AppNotification,
@@ -17,6 +19,22 @@ import type {
   OrgLocationMapping,
   OrgUnit,
   Person,
+  DiscoveryCandidate,
+  DiscoveryRun,
+  MonitoringRule,
+  PointReading,
+  MaintenanceRequest,
+  RedirectDestination,
+  WorkOrder,
+  Occurrence,
+  OccurrenceType,
+  ActionPlan,
+  Checklist,
+  ControlPoint,
+  ReinspectionRequest,
+  Routine,
+  RoutineExecution,
+  RoutinePlan,
 } from '@/domain';
 
 /**
@@ -43,10 +61,43 @@ export interface DemoDatabase {
   classifications: Classification[];
   assets: Asset[];
   devices: Device[];
+  groups: AssetGroup[];
+  groupHistory: GroupHistoryEntry[];
+  /** Indicadores da Central que não derivam diretamente do cadastro. */
+  centralStats: {
+    /** Cadastros/importações interrompidos por duplicidade detectada. */
+    duplicatesAvoided: number;
+  };
   // Monitor de Infraestrutura
   connectors: Connector[];
   deviceHealth: DeviceHealth[];
   dataPoints: DataPoint[];
+  discoveryRuns: DiscoveryRun[];
+  discoveryCandidates: DiscoveryCandidate[];
+  monitoringRules: MonitoringRule[];
+  pointReadings: PointReading[];
+  // Gestão de Ocorrências
+  occurrenceTypes: OccurrenceType[];
+  occurrences: Occurrence[];
+  occurrenceCounter: number;
+  // Gestão de Rotinas (produto existente)
+  routinePlans: RoutinePlan[];
+  controlPoints: ControlPoint[];
+  checklists: Checklist[];
+  routines: Routine[];
+  routineExecutions: RoutineExecution[];
+  reinspectionRequests: ReinspectionRequest[];
+  routineCounter: number;
+  // Planos de Ação (capacidade compartilhada GRS)
+  actionPlans: ActionPlan[];
+  planCounter: number;
+  // Gestão de Manutenção
+  maintenanceRequests: MaintenanceRequest[];
+  workOrders: WorkOrder[];
+  /** Destinos externos de redirecionamento (DP-38, lista configurável — demonstração). */
+  redirectDestinations: RedirectDestination[];
+  /** Sequenciais dos códigos legíveis. */
+  maintenanceCounters: { request: number; workOrder: number };
   // Feed de eventos (Security Hub e fontes)
   events: OperationalEvent[];
   // Fonte integrada: passagens do Controle de Acesso (simulado)
@@ -62,8 +113,10 @@ export interface DemoDatabase {
   demoSettings: {
     /** Gera passagens de acesso simuladas periodicamente. */
     liveSimulation: boolean;
+    /** App de Rotinas simulado sem conexão (dados ficam pendentes de sincronização). */
+    routinesAppOffline: boolean;
   };
 }
 
 /** Incrementar quando o formato mudar: dados persistidos antigos são descartados. */
-export const DEMO_SCHEMA_VERSION = 2;
+export const DEMO_SCHEMA_VERSION = 9;

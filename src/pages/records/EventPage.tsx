@@ -8,7 +8,9 @@ import { isServiceError } from '@/services';
 import { useAccess } from '@/app/providers/SessionProvider';
 import { useServices } from '@/app/providers/ServicesProvider';
 import { useServiceQuery } from '@/app/providers/useServiceQuery';
-import { ContextLink, usePageLabel } from '@/app/navigation/contextNavigation';
+import { ContextLink, useContextNavigation, usePageLabel } from '@/app/navigation/contextNavigation';
+import { occurrencePaths } from '@/modules/ocorrencias/shared';
+import { maintenancePaths } from '@/modules/manutencao/shared';
 import { ReturnBar } from '@/app/navigation/ReturnBar';
 import { paths } from '@/app/navigation/targets';
 import { QueryBoundary } from '../QueryBoundary';
@@ -27,6 +29,11 @@ export function EventPage() {
   const [acknowledging, setAcknowledging] = useState(false);
   const query = useServiceQuery(() => services.events.get(access, eventId), [eventId, access]);
   usePageLabel(query.data ? `Evento ${query.data.event.code}` : undefined);
+  const { navigateWithContext } = useContextNavigation();
+  const forward = {
+    register: services.occurrences.permissions(access).register,
+    request: services.maintenance.permissions(access).request,
+  };
 
   const acknowledge = async () => {
     setAcknowledging(true);
@@ -112,10 +119,28 @@ export function EventPage() {
                     </Panel>
                   </Col>
                 </Grid>
-                <Alert tone="info">
-                  Encaminhamentos a partir do evento — abrir solicitação de manutenção ou registrar ocorrência — serão habilitados quando os
-                  módulos especialistas forem implementados (etapa 5).
-                </Alert>
+                <Panel title="Encaminhamentos">
+                  {forward.register || forward.request ? (
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {forward.register && (
+                        <Button variant="secondary" icon="exclamation-triangle" onClick={() => navigateWithContext(occurrencePaths.register(event.id))}>
+                          Registrar ocorrência
+                        </Button>
+                      )}
+                      {forward.request && event.assetId && (
+                        <Button variant="secondary" icon="wrench" onClick={() => navigateWithContext(maintenancePaths.newRequest(event.assetId))}>
+                          Abrir solicitação de manutenção
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="helper">Seu perfil ou o contrato não permitem registrar ocorrência ou abrir solicitação a partir deste evento.</p>
+                  )}
+                  <p className="helper" style={{ marginTop: 8 }}>
+                    O encaminhamento cria o registro no módulo especialista com a origem preservada. O status do evento não muda: reconhecer continua sendo uma ação
+                    do Security Hub.
+                  </p>
+                </Panel>
               </Stack>
             </>
           );

@@ -14,6 +14,7 @@ Validar conceito, navegação, jornadas, campos e proposta de valor com clientes
 - Estados vazios e de demonstração.
 - Desktop-first responsivo.
 - Experiência móvel específica para execução de rotinas.
+- Experiência móvel demonstrativa para execução de OS ("Minhas OS"), online e na mesma aplicação (D-013). Não define arquitetura mobile, aplicativo nativo nem funcionamento offline de OS, que continuam em aberto.
 - Permissões e módulos contratados simulados para demonstrar perfis/capacidades.
 
 ## Persistência

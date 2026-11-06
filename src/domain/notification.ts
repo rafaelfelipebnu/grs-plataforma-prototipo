@@ -16,7 +16,12 @@ export type NavTarget =
   | { kind: 'location'; id: Id }
   | { kind: 'event'; id: Id }
   | { kind: 'person'; id: Id }
-  | { kind: 'module'; moduleId: ModuleId };
+  | { kind: 'module'; moduleId: ModuleId }
+  | { kind: 'maintenance-request'; id: Id }
+  | { kind: 'work-order'; id: Id }
+  | { kind: 'occurrence'; id: Id }
+  | { kind: 'action-plan'; id: Id }
+  | { kind: 'routine-execution'; id: Id };
 
 /**
  * Notificação da central compartilhada. LER a notificação (readByUserIds) é
@@ -35,4 +40,6 @@ export interface AppNotification {
   createdAt: ISODateString;
   target: NavTarget;
   readByUserIds: Id[];
+  /** Destinatários específicos (DP-07: notificação por destinatário elegível). Ausente = todos com acesso ao módulo e ao local. */
+  recipientUserIds?: Id[];
 }
