@@ -2,7 +2,11 @@ import { createDemoSeed } from '@/data/seed';
 import type { Services } from './contracts';
 import type { ServiceRuntime } from './internal';
 import { createAssetService, createDeviceService } from './mock/assetService';
+import { createCentralService } from './mock/centralService';
+import { createDiscoveryService } from './mock/discoveryService';
+import { createMonitorService } from './mock/monitorService';
 import { createDashboardService } from './mock/dashboardService';
+import { createGroupService } from './mock/groupService';
 import { createDemoService } from './mock/demoService';
 import { createSecurityHubService } from './mock/securityHubService';
 import { createEventService } from './mock/eventService';
@@ -43,6 +47,7 @@ export function createServices(options: CreateServicesOptions = {}): ServiceBund
     now,
     newId: (prefix) => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}`,
   };
+  const central = createCentralService(runtime);
   return {
     store,
     services: {
@@ -55,6 +60,10 @@ export function createServices(options: CreateServicesOptions = {}): ServiceBund
       notifications: createNotificationService(runtime),
       search: createSearchService(runtime),
       hub: createSecurityHubService(runtime),
+      central,
+      monitor: createMonitorService(runtime),
+      discovery: createDiscoveryService(runtime, central),
+      groups: createGroupService(runtime),
       dashboards: createDashboardService(runtime),
       demo: createDemoService(runtime),
     },

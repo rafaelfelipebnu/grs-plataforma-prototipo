@@ -11,3 +11,5 @@ export * from './notification';
 export * from './audit';
 export * from './accessPassage';
 export * from './dashboard';
+export * from './group';
+export * from './monitor';

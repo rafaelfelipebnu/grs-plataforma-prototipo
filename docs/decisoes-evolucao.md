@@ -106,6 +106,38 @@ Implementados como a opção mais simples e reversível. Não são decisões apr
 | P-25 | Restaurar padrão | O usuário pode descartar o painel pessoal e voltar ao padrão do cliente. | `DashboardPage.tsx` |
 | P-26 | Lista de eventos do Hub | Mostra somente eventos relevantes para segurança (ver P-07). Reconhecimento individual e em lote. | `securityHubService.ts` |
 
+## Comportamentos provisórios (etapa 3 — Central de Ativos e Ambientes) — a validar
+
+| # | Tema | Comportamento provisório | Onde alterar |
+|---|------|--------------------------|--------------|
+| P-27 | Árvore × localização contextual (Q-07) | A Central abre no local contextual do cabeçalho; depois, a seleção na árvore é independente e fica na URL. "Usar como localização contextual" sincroniza de forma explícita. O endereço antigo `/central/locais/:id` redireciona para a visão por local. | `src/modules/central/CentralHomePage.tsx` |
+| P-28 | Impacto operacional (Q-04) | Sem índice consolidado: o painel mostra separadamente locais atendidos, dependentes diretos, dependentes indiretos e sistemas de segurança afetados. | `centralService.ts` (`getAsset360`) |
+| P-29 | Duplicidade | A tag é o identificador único e bloqueia o cadastro, inclusive quando o ativo existente está fora do escopo (sem expô-lo). Nome semelhante na mesma localização gera aviso e exige confirmação "não é o mesmo ativo". Conta como "duplicidade evitada" abrir o cadastro existente a partir do aviso ou ignorar, na importação, uma linha duplicada ou semelhante. | `centralService.ts`, `AssetFormPage.tsx` |
+| P-30 | Completude do cadastro | Percentual de ativos com classificação, localização principal e responsável (direto ou herdado). | `centralService.ts` |
+| P-31 | Importação em lote | CSV colado na tela (upload de arquivo simulado), separador `;` ou `,`. Obrigatórias: tag, nome, classificação, local (código ou nome), criticidade; opcionais: responsável (matrícula ou e-mail), descrição. Linhas com erro ou tag existente são bloqueadas; linhas semelhantes vêm marcadas para ignorar, mas podem ser importadas. | `ImportAssetsPage.tsx`, `centralService.ts` |
+| P-32 | Motivo obrigatório | Edição de cadastro, alteração manual de condição e qualquer mudança de grupo exigem motivo (mínimo de 5 caracteres). Criar ativo não exige. | `ReasonModal` em `src/modules/central/shared.tsx` |
+| P-33 | Regras de grupo | Critérios por classificação, criticidade e local (classificação e local incluem descendentes). Dentro da regra os critérios se combinam (E); regras diferentes se somam (OU). Associação efetiva = regras + inclusões manuais − exceções. | `groupLogic.ts` |
+| P-34 | Governança de grupos | Nova permissão `central.groups.corporate` (só Administrador Corporativo): cria grupos para toda a empresa e edita regras, consumidores e periodicidade. Gestor Local (`central.manage` com escopo local) cria grupos locais operacionais, inclui/remove ativos e cria exceções no seu escopo e conclui auditorias locais. Exceção não se aplica a inclusão manual (remove-se a inclusão). | `groupService.ts`, `src/access/profiles.ts` |
+| P-35 | Auditoria periódica (Q-10) | Grupo corporativo é auditado por unidade do escopo; grupo local, pelo seu local. Situação em dia/vencida/pendente conforme a periodicidade; conclusão local registra observações e o número de associações revisadas. | `groupService.ts` |
+| P-36 | Grupos especializados | Exibidos na Central somente para consulta; são administrados pelo módulo dono. | `groupService.ts` |
+| P-37 | Abas de módulos no painel 360º | Monitor, Rotinas, Manutenção, Ocorrências e Riscos mostram o estado (em uso, não contratado, sem permissão) e a etapa de implementação, sem dados fictícios. Abrir solicitação/consultar OS a partir do ativo entra na etapa 5. | `Asset360Page.tsx` |
+| P-38 | Aba Grupos da Central | Lista não recortada pela árvore (a contagem de membros respeita o escopo). "Ver ativos" abre a aba Ativos filtrada pelo grupo no local selecionado. | `GroupsTab.tsx` |
+| P-39 | Validação de dispositivos descobertos | ~~Aprovação no Monitor~~ — corrigido na etapa 4: o PRD do Monitor e a matriz de fases (cenário C) colocam a aprovação na **Central**. Ver P-40. | `DevicesTab.tsx` |
+
+## Comportamentos provisórios (etapa 4 — Monitor de Infraestrutura e descoberta) — a validar
+
+| # | Tema | Comportamento provisório | Onde alterar |
+|---|------|--------------------------|--------------|
+| P-40 | Onde a descoberta é aprovada | O Monitor executa a descoberta (somente leitura) e guarda os candidatos no seu inventário; a revisão e a aprovação acontecem na Central (`/central/descobertas`), por perfil com `central.manage` no escopo do conector. Aprovar cria o dispositivo com localização confirmada e passa a expor seus pontos de dado; rejeitar não cria nada e o equipamento não volta em descobertas seguintes. Dispositivos já cadastrados com localização sugerida ou não identificada entram na mesma fila. | `discoveryService.ts`, `DiscoveryReviewPage.tsx` |
+| P-41 | Reconhecimento de alerta técnico | Alerta do Monitor sem impacto em segurança é reconhecido por quem configura o monitoramento (`monitor.manage`). Com impacto em segurança, continua reconhecido no Security Hub. O ciclo completo do alerta segue em aberto (Q-15). | `canAcknowledgeEvent` em `internal.ts` |
+| P-42 | Regras de monitoramento | Comparação simples de um ponto com um limite (maior, menor, igual, diferente), severidade escolhida; avaliada a cada leitura e ao criar/editar/ativar a regra. Um alerta ativo por regra (não duplica). O status do ponto passa a refletir a regra violada mais severa (crítica → crítico; demais → alerta). Sem histerese, janela, supressão ou escalonamento ("a definir" no PRD). | `monitorLogic.ts` |
+| P-43 | Sugestões da descoberta | Classificação e localização sugeridas a partir de pistas do equipamento (tipo, nome do objeto, tópico, sub-rede), sempre com a justificativa exibida. Correspondência com ativo: ativo na localização sugerida com a classificação sugerida (ou descendente). | `suggestFor` em `monitorService.ts`, `src/data/seed/network.ts` |
+| P-44 | Rede simulada | Cada conector de demonstração tem um inventário fixo do que "responde na rede"; conectores criados na demonstração encontram um equipamento genérico do protocolo. Nenhum equipamento real é acessado e credenciais não são coletadas (o campo de rede rejeita senha/token). | `src/data/seed/network.ts` |
+| P-45 | Conector desativado | Pausa coleta e descoberta dos seus dispositivos; não altera a saúde de comunicação nem a condição dos ativos. Ativar/desativar exige motivo e fica na auditoria. | `monitorService.ts` |
+| P-46 | Histórico de pontos | Série horária sintética das últimas 24 h (determinística, só para pontos numéricos) seguida das leituras simuladas na sessão. Retenção e frequência reais estão "a definir". | `pointHistory` em `monitorLogic.ts` |
+| P-47 | Leitura simulada | Ferramenta do facilitador no detalhe do ponto, identificada como demonstração. Representa um sinal do equipamento, marca a comunicação como online e avalia as regras. Recusada com o conector desativado. | `PointDetailPage.tsx` |
+| P-48 | Comunicação × condição | Alertas técnicos não alteram a condição operacional do ativo. Só o cenário A (falha da BMB-014) altera a condição, por ser um sinal de falha do equipamento. A regra geral de quando o Monitor alimenta a condição ainda precisa ser definida (Q-19). | `monitorLogic.ts`, `demoService.ts` |
+
 ---
 
 ## Dúvidas em aberto
@@ -117,16 +149,20 @@ Não bloqueiam a etapa 1. Precisam de definição antes das etapas indicadas.
 | Q-01 | Gestão de Riscos não tem documento próprio: entidades, campos, metodologia de avaliação e relação com controles. | 6 |
 | Q-02 | Ciclos de status não definidos: ocorrência (só o plano tem ciclo), ação do plano, solicitação, OS, execução, rotina/execução de rotina; escala de prioridade de solicitação/OS. | 5 |
 | Q-03 | **Dependência de documentação externa não transcrita**: conceitos e fluxos atuais de Gestão de Rotinas e de Gestão de Ocorrências estão em `documentacao.senior.com.br` (links em docs/04 e docs/06). Campos, status e telas existentes precisam ser transcritos antes da etapa 5 para serem preservados. | 5 |
-| Q-04 | Fórmula/escala do impacto operacional (dependências, locais atendidos, processos, pessoas). | 3 |
+| Q-04 | Fórmula/escala do impacto operacional (dependências, locais atendidos, processos, pessoas). Provisório: P-28. | 3 |
 | Q-05 | Herança de configuração em Manutenção (empresa → unidade/filial → grupo de ativos → ativo): "unidade/filial" pertence à estrutura organizacional ou à hierarquia de localização? | 5 |
 | Q-06 | Em docs/06, "ocorrência pode ser encerrada enquanto plano preventivo continua ativo": trata-se de plano de ação preventivo ou do plano preventivo da Manutenção? | 5 |
-| Q-07 | Como a localização contextual do cabeçalho se relaciona com a árvore permanente da Central (sincronizadas ou independentes)? | 3 |
+| Q-07 | Como a localização contextual do cabeçalho se relaciona com a árvore permanente da Central (sincronizadas ou independentes)? Provisório: P-27. | 3 |
 | Q-08 | Gestão de Terceiros: deve aparecer como módulo bloqueado (descoberta comercial) ou permanecer totalmente fora do protótipo? Atualmente fora. | 7 |
 | Q-09 | Execução de OS pelo Técnico precisa de experiência móvel própria (como Rotinas)? | 5 |
-| Q-10 | Fluxo de auditoria periódica de grupos (periodicidade mínima, conclusão local, visão corporativa). | 3 |
+| Q-10 | Fluxo de auditoria periódica de grupos (periodicidade mínima, conclusão local, visão corporativa). Provisório: P-35. | 3 |
 | Q-11 | Referência visual "V0.6 HTML" citada em docs/09 não está no repositório. | — |
-| Q-12 | Tipos adicionais de relacionamento entre ativos e vínculo com processos. | 3 |
+| Q-12 | Tipos adicionais de relacionamento entre ativos e vínculo com processos. Etapa 3 manteve apenas "depende de" (P-10). | 3 |
 | Q-13 | Definição de "tempo médio de resposta a eventos": até o reconhecimento, até o início do tratamento ou até o encerramento? | 5 |
 | Q-14 | Painel padrão: único por cliente ou também por unidade e/ou perfil de acesso? | 7 |
 | Q-15 | Ciclo completo do alerta no Security Hub além do reconhecimento (tratamento, falso alarme, encerramento) e sua relação com a ocorrência. | 5 |
 | Q-16 | Mapeamento oficial dos 17 widgets nas 4 áreas do dashboard (ver P-15). | 7 |
+| Q-17 | Mapa/planta da Central: formato das plantas, associação a unidade/prédio/andar e sincronização com a árvore. Etapa 3 usa o mapa esquemático pela hierarquia. | 7 |
+| Q-18 | Atributos específicos por classe de ativo (PRD da Central, "A definir"). | — |
+| Q-19 | Quando um sinal/alerta do Monitor deve alterar a condição operacional do ativo (automático, por regra configurada ou só manual)? | 5 |
+| Q-20 | Operadores, histerese, janelas, supressão e escalonamento das regras; frequência, volume e retenção da telemetria (PRD do Monitor, "A definir"). | — |

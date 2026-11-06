@@ -1,4 +1,6 @@
 import type {
+  AssetGroup,
+  GroupHistoryEntry,
   AccessPassage,
   DashboardLayout,
   AppNotification,
@@ -17,6 +19,10 @@ import type {
   OrgLocationMapping,
   OrgUnit,
   Person,
+  DiscoveryCandidate,
+  DiscoveryRun,
+  MonitoringRule,
+  PointReading,
 } from '@/domain';
 
 /**
@@ -43,10 +49,21 @@ export interface DemoDatabase {
   classifications: Classification[];
   assets: Asset[];
   devices: Device[];
+  groups: AssetGroup[];
+  groupHistory: GroupHistoryEntry[];
+  /** Indicadores da Central que não derivam diretamente do cadastro. */
+  centralStats: {
+    /** Cadastros/importações interrompidos por duplicidade detectada. */
+    duplicatesAvoided: number;
+  };
   // Monitor de Infraestrutura
   connectors: Connector[];
   deviceHealth: DeviceHealth[];
   dataPoints: DataPoint[];
+  discoveryRuns: DiscoveryRun[];
+  discoveryCandidates: DiscoveryCandidate[];
+  monitoringRules: MonitoringRule[];
+  pointReadings: PointReading[];
   // Feed de eventos (Security Hub e fontes)
   events: OperationalEvent[];
   // Fonte integrada: passagens do Controle de Acesso (simulado)
@@ -66,4 +83,4 @@ export interface DemoDatabase {
 }
 
 /** Incrementar quando o formato mudar: dados persistidos antigos são descartados. */
-export const DEMO_SCHEMA_VERSION = 2;
+export const DEMO_SCHEMA_VERSION = 4;

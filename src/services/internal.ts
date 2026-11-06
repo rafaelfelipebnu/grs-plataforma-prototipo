@@ -124,3 +124,58 @@ export function inScope(ctx: AccessContext, locationId: Id | undefined): boolean
   if (!locationId) return false;
   return ctx.visibleLocationIds === 'all' || ctx.visibleLocationIds.has(locationId);
 }
+
+/**
+ * Quem pode reconhecer o alerta:
+ * - alerta relevante para segurança: perfil com reconhecimento no Security Hub;
+ * - alerta técnico do Monitor: perfil que configura o monitoramento (P-41, provisório).
+ */
+export function canAcknowledgeEvent(ctx: AccessContext, event: OperationalEvent): boolean {
+  if (event.status !== 'ativo') return false;
+  if (isSecurityRelevant(event) && ctx.permissions.has('hub.events.acknowledge') && isModuleAvailable(ctx, 'security-hub')) return true;
+  return event.source === 'monitor' && ctx.permissions.has('monitor.manage') && isModuleAvailable(ctx, 'monitor');
+}
+
+/**
+ * Contexto de segurança de um sinal sobre o ativo: o próprio ativo é sistema
+ * de segurança, ou sistemas de segurança dependem dele (direta ou indiretamente).
+ */
+export function securityContextFor(db: Readonly<DemoDatabase>, assetId: Id | undefined): string | undefined {
+  if (!assetId) return undefined;
+  const asset = db.assets.find((a) => a.id === assetId);
+  if (!asset) return undefined;
+  if (hasSecurityClassification(db, asset.classificationId)) return `${asset.name} (${asset.tag}) é sistema de segurança.`;
+  const affected: string[] = [];
+  const seen = new Set<Id>([assetId]);
+  const queue = [assetId];
+  while (queue.length) {
+    const current = queue.shift()!;
+    for (const dep of db.assets.filter((a) => a.relationships.some((r) => r.type === 'depende-de' && r.targetAssetId === current))) {
+      if (seen.has(dep.id)) continue;
+      seen.add(dep.id);
+      queue.push(dep.id);
+      if (hasSecurityClassification(db, dep.classificationId)) affected.push(`${dep.name} (${dep.tag})`);
+    }
+  }
+  return affected.length ? `Afeta ${affected.join(', ')}.` : undefined;
+}
+
+export function paginate<T>(items: T[], page = 1, pageSize = 10) {
+  const size = Math.max(1, pageSize);
+  const last = Math.max(1, Math.ceil(items.length / size));
+  const current = Math.min(Math.max(1, page), last);
+  return { items: items.slice((current - 1) * size, current * size), total: items.length, page: current, pageSize: size };
+}
+
+/** A classificação é uma das indicadas ou descendente delas. */
+export function classificationWithinAny(db: Readonly<DemoDatabase>, classificationId: Id, ancestorIds: Id[]): boolean {
+  let current = db.classifications.find((c) => c.id === classificationId);
+  const guard = new Set<Id>();
+  while (current && !guard.has(current.id)) {
+    if (ancestorIds.includes(current.id)) return true;
+    guard.add(current.id);
+    const parentId = current.parentId;
+    current = parentId ? db.classifications.find((c) => c.id === parentId) : undefined;
+  }
+  return false;
+}

@@ -11,6 +11,7 @@ const PERMISSION_LABEL: Record<Permission, string> = {
   'hub.dashboard.default': 'Security Hub — definir o painel padrão do cliente',
   'central.view': 'Central de Ativos — consultar',
   'central.manage': 'Central de Ativos — gerenciar cadastro',
+  'central.groups.corporate': 'Central de Ativos — administrar grupos corporativos e regras gerais',
   'monitor.view': 'Monitor de Infraestrutura — consultar',
   'monitor.manage': 'Monitor de Infraestrutura — configurar monitoramento',
   'rotinas.view': 'Gestão de Rotinas — consultar',

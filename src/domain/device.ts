@@ -2,6 +2,8 @@ import type { Id, ISODateString } from './common';
 
 export type Protocol = 'BACnet' | 'Modbus' | 'MQTT' | 'ONVIF' | 'SNMP';
 
+export const PROTOCOL_LIST: Protocol[] = ['BACnet', 'Modbus', 'MQTT', 'ONVIF', 'SNMP'];
+
 /**
  * Estado da localização física do dispositivo. Descoberta NÃO confirma
  * localização: a confirmação exige aprovação humana.
@@ -38,6 +40,8 @@ export interface Device {
   /** Ativo alimentado pelo dispositivo (um dispositivo pode ser o próprio ativo, ex.: câmera). */
   assetId?: Id;
   origin: DeviceOrigin;
+  /** Endereço de rede/identificador no protocolo (fictício). */
+  address?: string;
 }
 
 /** Conector do agente GRS (simulado). Propriedade do Monitor de Infraestrutura. */
@@ -52,6 +56,11 @@ export interface Connector {
   unitLocationId: Id;
   /** Sempre simulado neste protótipo. */
   simulated: true;
+  /** Desativado = sem coleta nem descoberta (alteração exige motivo e auditoria). */
+  active: boolean;
+  /** Faixa de rede ou endpoint (fictício). Credenciais não são coletadas no protótipo. */
+  networkScope: string;
+  lastDiscoveryAt?: string;
 }
 
 export type CommunicationStatus = 'online' | 'instavel' | 'offline';

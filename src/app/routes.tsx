@@ -1,4 +1,4 @@
-import type { RouteObject } from 'react-router-dom';
+import { Navigate, useParams, type RouteObject } from 'react-router-dom';
 import { MODULE_ORDER } from '@/modules/registry';
 import type { ModuleId } from '@/domain';
 import { AppShell } from '@/shell/AppShell';
@@ -11,15 +11,35 @@ import { ModuleHomePage } from '@/pages/ModuleHomePage';
 import { SearchPage } from '@/pages/SearchPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { LandingRedirect, NotFoundPage, RequireSession } from '@/pages/SystemPages';
-import { AssetPage } from '@/pages/records/AssetPage';
 import { DevicePage } from '@/pages/records/DevicePage';
 import { EventPage } from '@/pages/records/EventPage';
-import { LocationPage } from '@/pages/records/LocationPage';
 import { PersonPage } from '@/pages/records/PersonPage';
+import { CentralHomePage } from '@/modules/central/CentralHomePage';
+import { Asset360Page } from '@/modules/central/Asset360Page';
+import { EditAssetPage, NewAssetPage } from '@/modules/central/AssetFormPage';
+import { ImportAssetsPage } from '@/modules/central/ImportAssetsPage';
+import { GroupDetailPage } from '@/modules/central/GroupDetailPage';
+import { EditGroupPage, NewGroupPage } from '@/modules/central/GroupFormPage';
+import { centralPaths } from '@/modules/central/centralPaths';
+import { DiscoveryReviewPage } from '@/modules/central/DiscoveryReviewPage';
+import { MonitorOverviewPage } from '@/modules/monitor/MonitorOverviewPage';
+import { ConnectorsPage } from '@/modules/monitor/ConnectorsPage';
+import { DiscoveryPage } from '@/modules/monitor/DiscoveryPage';
+import { MonitorAlertsPage, MonitorDevicesPage, MonitorHistoryPage, PointsPage } from '@/modules/monitor/MonitorListsPages';
+import { PointDetailPage } from '@/modules/monitor/PointDetailPage';
+import { RulesPage } from '@/modules/monitor/RulesPage';
+
+/** Endereço antigo de local: a visão por local vive na home da Central. */
+function LocationRedirect() {
+  const { locationId = '' } = useParams();
+  return <Navigate to={centralPaths.location(locationId)} replace />;
+}
 
 /** Página inicial dos módulos já implementados (os demais usam a página provisória). */
 const MODULE_INDEX: Partial<Record<ModuleId, JSX.Element>> = {
   'security-hub': <DashboardPage />,
+  central: <CentralHomePage />,
+  monitor: <MonitorOverviewPage />,
 };
 
 /** Rotas de cada módulo (crescem a cada etapa). */
@@ -29,10 +49,27 @@ const MODULE_CHILD_ROUTES: Partial<Record<ModuleId, RouteObject[]>> = {
     { path: 'eventos/:eventId', element: <EventPage /> },
     { path: 'acessos', element: <AccessListPage /> },
   ],
+  monitor: [
+    { path: 'conectores', element: <ConnectorsPage /> },
+    { path: 'descoberta', element: <DiscoveryPage /> },
+    { path: 'dispositivos', element: <MonitorDevicesPage /> },
+    { path: 'pontos', element: <PointsPage /> },
+    { path: 'pontos/:pointId', element: <PointDetailPage /> },
+    { path: 'regras', element: <RulesPage /> },
+    { path: 'alertas', element: <MonitorAlertsPage /> },
+    { path: 'historico', element: <MonitorHistoryPage /> },
+  ],
   central: [
-    { path: 'ativos/:assetId', element: <AssetPage /> },
+    { path: 'ativos/novo', element: <NewAssetPage /> },
+    { path: 'ativos/importar', element: <ImportAssetsPage /> },
+    { path: 'ativos/:assetId', element: <Asset360Page /> },
+    { path: 'ativos/:assetId/editar', element: <EditAssetPage /> },
+    { path: 'grupos/novo', element: <NewGroupPage /> },
+    { path: 'grupos/:groupId', element: <GroupDetailPage /> },
+    { path: 'grupos/:groupId/editar', element: <EditGroupPage /> },
     { path: 'dispositivos/:deviceId', element: <DevicePage /> },
-    { path: 'locais/:locationId', element: <LocationPage /> },
+    { path: 'descobertas', element: <DiscoveryReviewPage /> },
+    { path: 'locais/:locationId', element: <LocationRedirect /> },
   ],
 };
 

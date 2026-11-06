@@ -6,6 +6,8 @@ import { DEMO_CONNECTORS, DEMO_DEVICES, createDemoDataPoints, createDemoDeviceHe
 import { createDemoEvents, createDemoNotifications } from './events';
 import { createDemoAccessPassages } from './accessPassages';
 import { createDefaultDashboard } from './dashboard';
+import { createDemoGroupHistory, createDemoGroups } from './groups';
+import { createDemoRules } from './network';
 import { DEMO_COMPANY, DEMO_LOCATIONS, DEMO_ORG_LOCATION_MAPPINGS, DEMO_ORG_UNITS } from './organization';
 import { DEMO_PEOPLE, DEMO_USERS } from './people';
 
@@ -30,9 +32,16 @@ export function createDemoSeed(now: Date = new Date()): DemoDatabase {
     classifications: DEMO_CLASSIFICATIONS,
     assets: createDemoAssets(at),
     devices: DEMO_DEVICES,
+    groups: createDemoGroups(at),
+    groupHistory: createDemoGroupHistory(at),
+    centralStats: { duplicatesAvoided: 0 },
     connectors: DEMO_CONNECTORS,
     deviceHealth: createDemoDeviceHealth(at),
     dataPoints: createDemoDataPoints(at),
+    discoveryRuns: [],
+    discoveryCandidates: [],
+    monitoringRules: createDemoRules(at),
+    pointReadings: [],
     events: createDemoEvents(at),
     accessPassages: createDemoAccessPassages(at),
     dashboards: { clientDefault: createDefaultDashboard(at(1440)), personal: {} },

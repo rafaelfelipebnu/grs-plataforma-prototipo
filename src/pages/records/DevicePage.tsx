@@ -1,13 +1,13 @@
 import { useParams } from 'react-router-dom';
 import { isModuleAvailable } from '@/access';
-import { Alert, Badge, Col, EmptyState, Grid, LabelValue, LabelValueGrid, PageHeader, Panel, Stack } from '@/components/ui';
+import { Alert, Badge, Button, Col, EmptyState, Grid, LabelValue, LabelValueGrid, PageHeader, Panel, Stack } from '@/components/ui';
 import { CommunicationBadge, DataPointStatusBadge, DeviceLocationBadge, formatDateTime, formatRelative, formatValue } from '@/components/domain';
 import { MODULES } from '@/modules/registry';
 import type { DeviceOrigin } from '@/domain';
 import { useAccess } from '@/app/providers/SessionProvider';
 import { useServices } from '@/app/providers/ServicesProvider';
 import { useServiceQuery } from '@/app/providers/useServiceQuery';
-import { ContextLink, usePageLabel } from '@/app/navigation/contextNavigation';
+import { ContextLink, useContextNavigation, usePageLabel } from '@/app/navigation/contextNavigation';
 import { ReturnBar } from '@/app/navigation/ReturnBar';
 import { paths } from '@/app/navigation/targets';
 import { QueryBoundary } from '../QueryBoundary';
@@ -23,7 +23,7 @@ const ORIGIN_LABEL: Record<DeviceOrigin, string> = {
 /**
  * Identidade do dispositivo (Central) com dados técnicos consolidados do
  * Monitor de Infraestrutura quando contratado. A gestão técnica do
- * monitoramento permanece no Monitor (etapa 4).
+ * monitoramento (conectores, regras, histórico de pontos) permanece no Monitor.
  */
 export function DevicePage() {
   const { deviceId = '' } = useParams();
@@ -32,6 +32,7 @@ export function DevicePage() {
   const query = useServiceQuery(() => services.devices.get(access, deviceId), [deviceId, access]);
   usePageLabel(query.data ? `Dispositivo ${query.data.device.name}` : undefined);
   const monitorState = isModuleAvailable(access, 'monitor');
+  const { navigateWithContext } = useContextNavigation();
 
   return (
     <>
@@ -53,9 +54,19 @@ export function DevicePage() {
               />
               <Stack>
                 {device.locationStatus !== 'confirmada' && (
-                  <Alert tone="warning" title="Localização física não confirmada">
-                    A descoberta não confirma a localização física nem associa ativos automaticamente. A validação por uma pessoa autorizada
-                    será implementada com o fluxo de descoberta (etapa 4).
+                  <Alert
+                    tone="warning"
+                    title="Localização física não confirmada"
+                    action={
+                      services.discovery.canReview(access) ? (
+                        <Button size="small" onClick={() => navigateWithContext('/central/descobertas')}>
+                          Revisar
+                        </Button>
+                      ) : undefined
+                    }
+                  >
+                    A descoberta não confirma a localização física nem associa ativos automaticamente. Uma pessoa autorizada confirma a localização na
+                    revisão de dispositivos descobertos da Central.
                   </Alert>
                 )}
                 <Grid>
@@ -71,6 +82,8 @@ export function DevicePage() {
                           {s.connector?.name} <Badge tone="gray">Simulado</Badge>
                         </LabelValue>
                         <LabelValue label="Origem do cadastro">{ORIGIN_LABEL[device.origin]}</LabelValue>
+                        {device.address && <LabelValue label="Endereço">{device.address}</LabelValue>}
+                        <LabelValue label="Coleta">{s.connector && !s.connector.active ? 'Pausada — conector desativado' : 'Ativa'}</LabelValue>
                       </LabelValueGrid>
                     </Panel>
                   </Col>
@@ -135,7 +148,9 @@ export function DevicePage() {
                             <tbody>
                               {s.monitoring.dataPoints.map((p) => (
                                 <tr key={p.id}>
-                                  <td>{p.name}</td>
+                                  <td>
+                                    <ContextLink to={`/monitor/pontos/${p.id}`}>{p.name}</ContextLink>
+                                  </td>
                                   <td>{formatValue(p.value, p.unit)}</td>
                                   <td>
                                     <DataPointStatusBadge value={p.status} />

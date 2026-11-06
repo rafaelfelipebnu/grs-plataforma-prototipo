@@ -2,14 +2,14 @@ import type { Connector, DataPoint, Device, DeviceHealth, ISODateString } from '
 
 /** Conectores do agente GRS — todos simulados. */
 export const DEMO_CONNECTORS: Connector[] = [
-  { id: 'conn-modbus-joi', name: 'Agente GRS Joinville · Modbus TCP', protocol: 'Modbus', unitLocationId: 'loc-joi', simulated: true },
-  { id: 'conn-bacnet-joi', name: 'Agente GRS Joinville · BACnet/IP', protocol: 'BACnet', unitLocationId: 'loc-joi', simulated: true },
-  { id: 'conn-onvif-joi', name: 'Agente GRS Joinville · ONVIF', protocol: 'ONVIF', unitLocationId: 'loc-joi', simulated: true },
-  { id: 'conn-snmp-joi', name: 'Agente GRS Joinville · SNMP', protocol: 'SNMP', unitLocationId: 'loc-joi', simulated: true },
-  { id: 'conn-mqtt-joi', name: 'Agente GRS Joinville · MQTT', protocol: 'MQTT', unitLocationId: 'loc-joi', simulated: true },
-  { id: 'conn-modbus-cwb', name: 'Agente GRS Curitiba · Modbus TCP', protocol: 'Modbus', unitLocationId: 'loc-cwb', simulated: true },
-  { id: 'conn-onvif-cwb', name: 'Agente GRS Curitiba · ONVIF', protocol: 'ONVIF', unitLocationId: 'loc-cwb', simulated: true },
-  { id: 'conn-mqtt-cwb', name: 'Agente GRS Curitiba · MQTT', protocol: 'MQTT', unitLocationId: 'loc-cwb', simulated: true },
+  { id: 'conn-modbus-joi', name: 'Agente GRS Joinville · Modbus TCP', protocol: 'Modbus', unitLocationId: 'loc-joi', simulated: true, active: true, networkScope: '10.20.1.0/24' },
+  { id: 'conn-bacnet-joi', name: 'Agente GRS Joinville · BACnet/IP', protocol: 'BACnet', unitLocationId: 'loc-joi', simulated: true, active: true, networkScope: '10.20.2.0/24' },
+  { id: 'conn-onvif-joi', name: 'Agente GRS Joinville · ONVIF', protocol: 'ONVIF', unitLocationId: 'loc-joi', simulated: true, active: true, networkScope: '10.20.4.0/24' },
+  { id: 'conn-snmp-joi', name: 'Agente GRS Joinville · SNMP', protocol: 'SNMP', unitLocationId: 'loc-joi', simulated: true, active: true, networkScope: '10.20.0.0/24' },
+  { id: 'conn-mqtt-joi', name: 'Agente GRS Joinville · MQTT', protocol: 'MQTT', unitLocationId: 'loc-joi', simulated: true, active: true, networkScope: 'mqtt://broker.joi.demo:8883' },
+  { id: 'conn-modbus-cwb', name: 'Agente GRS Curitiba · Modbus TCP', protocol: 'Modbus', unitLocationId: 'loc-cwb', simulated: true, active: true, networkScope: '10.30.1.0/24' },
+  { id: 'conn-onvif-cwb', name: 'Agente GRS Curitiba · ONVIF', protocol: 'ONVIF', unitLocationId: 'loc-cwb', simulated: true, active: true, networkScope: '10.30.4.0/24' },
+  { id: 'conn-mqtt-cwb', name: 'Agente GRS Curitiba · MQTT', protocol: 'MQTT', unitLocationId: 'loc-cwb', simulated: true, active: true, networkScope: 'mqtt://broker.cwb.demo:8883' },
 ];
 
 export const DEMO_DEVICES: Device[] = [

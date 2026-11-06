@@ -69,10 +69,11 @@ describe('busca global e navegação contextual', () => {
     await user.click(option);
     await waitFor(() => expect(router.state.location.pathname).toBe('/central/ativos/a-bmb014'));
     expect(await screen.findByRole('heading', { level: 1, name: /BMB-014/ })).toBeInTheDocument();
-    expect(screen.getByText('Criticidade alta')).toBeInTheDocument();
+    expect(screen.getAllByText('Criticidade alta').length).toBeGreaterThan(0);
 
-    // Navega para o sistema dependente e volta pela pilha de contexto.
-    await user.click(screen.getByRole('link', { name: 'SIS-INC-01' }));
+    // Navega para o sistema dependente (aba Relacionamentos) e volta pela pilha de contexto.
+    await user.click(screen.getByRole('tab', { name: 'Relacionamentos' }));
+    await user.click(await screen.findByRole('link', { name: 'SIS-INC-01' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/central/ativos/a-sisinc'));
     await user.click(await screen.findByRole('button', { name: /Voltar para BMB-014/ }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/central/ativos/a-bmb014'));

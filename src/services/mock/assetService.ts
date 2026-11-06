@@ -1,12 +1,12 @@
 import { isModuleAvailable, type AccessContext } from '@/access';
 import type { DemoDatabase } from '@/data/database';
-import type { Classification, Device, Id } from '@/domain';
-import type { AssetService, DeviceService, ResponsibilityOrigin } from '../contracts';
+import type { Asset, Classification, Device, Id } from '@/domain';
+import type { AssetService, AssetSummary, DeviceService, ResponsibilityOrigin } from '../contracts';
 import { forbidden, notFound } from '../errors';
 import { inScope, locationIndexOf, simulateLatency, type ServiceRuntime } from '../internal';
 import { OUT_OF_SCOPE_MESSAGE, requireModule } from './guards';
 
-function classificationPath(db: Readonly<DemoDatabase>, id: Id): Classification[] {
+export function classificationPath(db: Readonly<DemoDatabase>, id: Id): Classification[] {
   const path: Classification[] = [];
   let current = db.classifications.find((c) => c.id === id);
   while (current) {
@@ -28,6 +28,38 @@ export function isDeviceVisible(ctx: AccessContext, db: Readonly<DemoDatabase>, 
   return inScope(ctx, deviceScopeLocationId(db, device));
 }
 
+/** Responsabilidade híbrida: direta ou herdada do local mais próximo que tenha responsável. */
+export function resolveResponsibility(
+  db: Readonly<DemoDatabase>,
+  asset: Pick<Asset, 'directResponsiblePersonId' | 'primaryLocationId'>,
+): { personId?: Id; origin: ResponsibilityOrigin } {
+  if (asset.directResponsiblePersonId) return { personId: asset.directResponsiblePersonId, origin: { kind: 'direto' } };
+  const fromLocation = [...locationIndexOf(db).pathOf(asset.primaryLocationId)].reverse().find((l) => l.responsiblePersonId);
+  if (fromLocation) return { personId: fromLocation.responsiblePersonId, origin: { kind: 'herdado', fromLocation } };
+  return { origin: { kind: 'nao-definido' } };
+}
+
+/** Monta o resumo de identidade do ativo respeitando o escopo nas relações. */
+export function buildAssetSummary(ctx: AccessContext, db: Readonly<DemoDatabase>, asset: Asset): AssetSummary {
+  const index = locationIndexOf(db);
+  const responsibility = resolveResponsibility(db, asset);
+  return {
+    asset,
+    classificationPath: classificationPath(db, asset.classificationId),
+    primaryLocationPath: index.pathOf(asset.primaryLocationId),
+    servedLocations: asset.servedLocationIds.map((locId) => index.get(locId)).filter((l): l is NonNullable<typeof l> => Boolean(l)),
+    responsible: responsibility.personId ? db.people.find((p) => p.id === responsibility.personId) : undefined,
+    responsibilityOrigin: responsibility.origin,
+    devices: db.devices.filter((d) => d.assetId === asset.id && isDeviceVisible(ctx, db, d)),
+    dependsOn: asset.relationships
+      .map((r) => db.assets.find((a) => a.id === r.targetAssetId))
+      .filter((a): a is NonNullable<typeof a> => Boolean(a && inScope(ctx, a.primaryLocationId))),
+    dependents: db.assets.filter(
+      (a) => inScope(ctx, a.primaryLocationId) && a.relationships.some((r) => r.type === 'depende-de' && r.targetAssetId === asset.id),
+    ),
+  };
+}
+
 export function createAssetService(rt: ServiceRuntime): AssetService {
   return {
     async get(ctx, id) {
@@ -37,43 +69,7 @@ export function createAssetService(rt: ServiceRuntime): AssetService {
       const asset = db.assets.find((a) => a.id === id);
       if (!asset) throw notFound('Ativo não encontrado.');
       if (!inScope(ctx, asset.primaryLocationId)) throw forbidden(OUT_OF_SCOPE_MESSAGE);
-
-      const index = locationIndexOf(db);
-      const primaryLocationPath = index.pathOf(asset.primaryLocationId);
-
-      // Responsabilidade híbrida: direta ou herdada do local mais próximo.
-      let responsibilityOrigin: ResponsibilityOrigin = { kind: 'nao-definido' };
-      let responsibleId: Id | undefined;
-      if (asset.directResponsiblePersonId) {
-        responsibleId = asset.directResponsiblePersonId;
-        responsibilityOrigin = { kind: 'direto' };
-      } else {
-        const fromLocation = [...primaryLocationPath].reverse().find((l) => l.responsiblePersonId);
-        if (fromLocation) {
-          responsibleId = fromLocation.responsiblePersonId;
-          responsibilityOrigin = { kind: 'herdado', fromLocation };
-        }
-      }
-
-      return {
-        asset,
-        classificationPath: classificationPath(db, asset.classificationId),
-        primaryLocationPath,
-        servedLocations: asset.servedLocationIds
-          .map((locId) => index.get(locId))
-          .filter((l): l is NonNullable<typeof l> => Boolean(l)),
-        responsible: responsibleId ? db.people.find((p) => p.id === responsibleId) : undefined,
-        responsibilityOrigin,
-        devices: db.devices.filter((d) => d.assetId === asset.id && isDeviceVisible(ctx, db, d)),
-        dependsOn: asset.relationships
-          .map((r) => db.assets.find((a) => a.id === r.targetAssetId))
-          .filter((a): a is NonNullable<typeof a> => Boolean(a && inScope(ctx, a.primaryLocationId))),
-        dependents: db.assets.filter(
-          (a) =>
-            inScope(ctx, a.primaryLocationId) &&
-            a.relationships.some((r) => r.type === 'depende-de' && r.targetAssetId === asset.id),
-        ),
-      };
+      return buildAssetSummary(ctx, db, asset);
     },
   };
 }

@@ -14,6 +14,7 @@ const ALL_PERMISSIONS: Permission[] = [
   'hub.dashboard.default',
   'central.view',
   'central.manage',
+  'central.groups.corporate',
   'monitor.view',
   'monitor.manage',
   'rotinas.view',

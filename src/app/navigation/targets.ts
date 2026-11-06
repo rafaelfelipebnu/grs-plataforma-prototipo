@@ -6,7 +6,7 @@ import type { Services } from '@/services';
 export const paths = {
   asset: (id: string) => `/central/ativos/${id}`,
   device: (id: string) => `/central/dispositivos/${id}`,
-  location: (id: string) => `/central/locais/${id}`,
+  location: (id: string) => `/central?local=${encodeURIComponent(id)}`,
   event: (id: string) => `/security-hub/eventos/${id}`,
   person: (id: string) => `/pessoas/${id}`,
   search: (q: string) => `/busca?q=${encodeURIComponent(q)}`,

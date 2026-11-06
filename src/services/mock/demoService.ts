@@ -102,6 +102,12 @@ export function createDemoService(rt: ServiceRuntime): DemoService {
         setPoint('dp-bmb-pressao', 0.4, 'critico');
         setPoint('dp-bmb-motor', 'Falha', 'critico');
         setPoint('dp-bmb-corrente', 0, 'normal');
+        draft.pointReadings.push(
+          { pointId: 'dp-bmb-pressao', at: now, value: 0.4, status: 'critico' },
+          { pointId: 'dp-bmb-motor', at: now, value: 'Falha', status: 'critico' },
+        );
+        const rule = draft.monitoringRules.find((r) => r.id === 'rule-bmb-pressao');
+        if (rule) rule.lastTriggeredAt = now;
 
         // 2. Condição operacional do ativo alimentada pelo Monitor (criticidade não muda).
         const pump = draft.assets.find((a) => a.id === 'a-bmb014')!;
@@ -131,6 +137,7 @@ export function createDemoService(rt: ServiceRuntime): DemoService {
           locationId: pump.primaryLocationId,
           assetId: pump.id,
           deviceId: 'd-bmb014',
+          ruleId: 'rule-bmb-pressao',
           occurredAt: now,
           securityContext,
           status: 'ativo',
