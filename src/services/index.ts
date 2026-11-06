@@ -11,6 +11,7 @@ import { createDemoService } from './mock/demoService';
 import { createSecurityHubService } from './mock/securityHubService';
 import { createEventService } from './mock/eventService';
 import { createLocationService } from './mock/locationService';
+import { createMaintenanceService } from './mock/maintenanceService';
 import { createNotificationService } from './mock/notificationService';
 import { createPeopleService } from './mock/peopleService';
 import { createSearchService } from './mock/searchService';
@@ -66,6 +67,7 @@ export function createServices(options: CreateServicesOptions = {}): ServiceBund
       groups: createGroupService(runtime),
       dashboards: createDashboardService(runtime),
       demo: createDemoService(runtime),
+      maintenance: createMaintenanceService(runtime),
     },
   };
 }

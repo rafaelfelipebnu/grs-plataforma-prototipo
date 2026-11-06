@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { isModuleAvailable, moduleAccess } from '@/access';
 import {
-  Alert,
   Badge,
   Button,
   Col,
@@ -40,6 +39,7 @@ import { ReturnBar } from '@/app/navigation/ReturnBar';
 import { paths } from '@/app/navigation/targets';
 import { useAcknowledge } from '@/modules/security-hub/widgets/useAcknowledge';
 import { QueryBoundary } from '@/pages/QueryBoundary';
+import { AssetMaintenancePanel } from '@/modules/manutencao/AssetMaintenancePanel';
 import { LocationLink, PersonRef, SOURCE_LABEL } from '@/pages/records/shared';
 import { centralPaths } from './centralPaths';
 import { ReasonModal } from './shared';
@@ -318,6 +318,9 @@ function ModulesSection({ s }: { s: Asset360 }) {
         text: `${s.devices.length} dispositivo(s) associado(s). Comunicação, pontos de dado, regras e alertas técnicos são geridos no Monitor.`,
       };
     }
+    if (moduleId === 'manutencao') {
+      return { tone: 'green', status: 'Em uso', text: 'Solicitações e ordens de serviço deste ativo estão na aba Operação, que também permite abrir uma nova solicitação.' };
+    }
     return { tone: 'green', status: 'Contratado', text: `Os dados deste ativo em ${module.name} serão exibidos aqui a partir da etapa ${module.buildStage} do protótipo.` };
   };
   return (
@@ -351,7 +354,6 @@ function ModulesSection({ s }: { s: Asset360 }) {
 
 function OperationSection({ s }: { s: Asset360 }) {
   const { acknowledge, pending } = useAcknowledge();
-  const manutencao = moduleAccess(useAccess(), 'manutencao');
   return (
     <Stack>
       <Panel title="Alertas e eventos do ativo" flush>
@@ -402,13 +404,7 @@ function OperationSection({ s }: { s: Asset360 }) {
           </div>
         )}
       </Panel>
-      <Alert tone="info" title="Solicitações e ordens de serviço">
-        {manutencao === 'not-contracted'
-          ? 'Abrir solicitação e consultar ordens de serviço a partir do ativo estão disponíveis com a Gestão de Manutenção contratada.'
-          : manutencao === 'no-permission'
-            ? 'Seu perfil não acessa a Gestão de Manutenção.'
-            : 'Abrir solicitação de manutenção e consultar ordens de serviço a partir deste painel serão habilitados na etapa 5 do protótipo.'}
-      </Alert>
+      <AssetMaintenancePanel assetId={s.asset.id} />
     </Stack>
   );
 }

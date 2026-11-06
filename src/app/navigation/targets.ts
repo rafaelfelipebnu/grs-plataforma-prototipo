@@ -10,6 +10,8 @@ export const paths = {
   event: (id: string) => `/security-hub/eventos/${id}`,
   person: (id: string) => `/pessoas/${id}`,
   search: (q: string) => `/busca?q=${encodeURIComponent(q)}`,
+  maintenanceRequest: (id: string) => `/manutencao/solicitacoes/${id}`,
+  workOrder: (id: string) => `/manutencao/os/${id}`,
 };
 
 /**
@@ -29,6 +31,10 @@ export function resolveTargetPath(target: NavTarget, access: AccessContext, serv
       return paths.person(target.id);
     case 'module':
       return MODULES[target.moduleId].basePath;
+    case 'maintenance-request':
+      return paths.maintenanceRequest(target.id);
+    case 'work-order':
+      return paths.workOrder(target.id);
     case 'event': {
       const info = services.events.routingInfo(access, target.id);
       if (!info) return null;

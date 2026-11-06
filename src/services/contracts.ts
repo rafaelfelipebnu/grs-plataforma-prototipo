@@ -48,6 +48,13 @@ import type {
   OrgUnit,
   Person,
   Profile,
+  MaintenancePriority,
+  MaintenanceRequest,
+  RedirectDestination,
+  RequestStatus,
+  WorkExecution,
+  WorkOrder,
+  WorkOrderStatus,
 } from '@/domain';
 
 /**
@@ -880,6 +887,180 @@ export interface DemoService {
   simulatePumpFailure(): Promise<{ eventId: Id; notificationId: Id }>;
 }
 
+// ── Gestão de Manutenção ─────────────────────────────────────────────
+
+/** O que o perfil pode fazer na Manutenção (permissão + contrato; escopo é verificado por registro). */
+export interface MaintenancePermissions {
+  request: boolean;
+  triage: boolean;
+  manageOrders: boolean;
+  execute: boolean;
+}
+
+export interface MaintenanceHistoryView {
+  at: string;
+  actorName: string;
+  text: string;
+}
+
+export interface RequestQuery extends LocationFilter {
+  /** 'pendentes' = Aberta + Em triagem. */
+  status?: RequestStatus | 'pendentes';
+  search?: string;
+  /** Somente solicitações abertas pelo usuário. */
+  mine?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface RequestListItem {
+  request: MaintenanceRequest;
+  asset?: Asset;
+  locationPath: Location[];
+  requesterName: string;
+  workOrder?: WorkOrder;
+  /** OS vinculada cancelada, aguardando decisão da triagem (DP-50). */
+  awaitingTriageDecision: boolean;
+}
+
+export interface RequestActions {
+  edit: boolean;
+  cancel: boolean;
+  startTriage: boolean;
+  decide: boolean;
+  resumeTriage: boolean;
+}
+
+export interface RequestDetail extends RequestListItem {
+  history: MaintenanceHistoryView[];
+  duplicateOf?: MaintenanceRequest;
+  duplicates: MaintenanceRequest[];
+  cancelledWorkOrders: WorkOrder[];
+  triageName?: string;
+  redirectDestination?: RedirectDestination;
+  actions: RequestActions;
+}
+
+export interface NewRequestInput {
+  title: string;
+  description: string;
+  locationId: Id;
+  assetId?: Id;
+  perceivedPriority: MaintenancePriority;
+  origin: MaintenanceRequest['origin'];
+}
+
+export type RequestEditInput = Pick<NewRequestInput, 'title' | 'description' | 'perceivedPriority'>;
+
+export interface WorkOrderQuery extends LocationFilter {
+  /** 'ativas' = não encerradas nem canceladas. */
+  status?: WorkOrderStatus | 'ativas';
+  search?: string;
+  /** Somente OS atribuídas ao usuário (Minhas OS). */
+  mine?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface WorkOrderListItem {
+  order: WorkOrder;
+  asset?: Asset;
+  locationPath: Location[];
+  technicianName?: string;
+  /** Data prevista ultrapassada com a OS ainda ativa (indicador, não status). */
+  overdue: boolean;
+  openImpediments: number;
+}
+
+export interface ExecutionView {
+  execution: WorkExecution;
+  technicianName: string;
+}
+
+export interface WorkOrderActions {
+  plan: boolean;
+  startExecution: boolean;
+  /** Execução em andamento do próprio usuário, se houver. */
+  myRunningExecutionId?: Id;
+  registerImpediment: boolean;
+  submitForClosure: boolean;
+  close: boolean;
+  returnToExecution: boolean;
+  suspend: boolean;
+  /** Motivo pelo qual "Suspender" não está disponível agora. */
+  suspendBlockedReason?: string;
+  resume: boolean;
+  cancel: boolean;
+  cancelBlockedReason?: string;
+  /** Hipótese demonstrativa (P-51). */
+  interruptExecution: boolean;
+}
+
+export interface WorkOrderDetail extends WorkOrderListItem {
+  requests: MaintenanceRequest[];
+  executions: ExecutionView[];
+  history: MaintenanceHistoryView[];
+  actions: WorkOrderActions;
+  /** Tempo total e líquido (sem suspensões), em ms. Sem desconto de SLA (D-013). */
+  time: { totalMs: number; suspendedMs: number; netMs: number };
+  createdByName: string;
+}
+
+export interface TechnicianOption {
+  userId: Id;
+  name: string;
+  jobTitle: string;
+}
+
+export interface MaintenanceOverview {
+  requestsByStatus: Record<RequestStatus, number>;
+  ordersByStatus: Record<WorkOrderStatus, number>;
+  overdueOrders: number;
+  triageQueue: RequestListItem[];
+  awaitingClosure: WorkOrderListItem[];
+  withImpediments: WorkOrderListItem[];
+  myOrders: WorkOrderListItem[];
+  myRequests: RequestListItem[];
+}
+
+export interface MaintenanceService {
+  permissions(ctx: AccessContext): MaintenancePermissions;
+  overview(ctx: AccessContext, filter: LocationFilter): Promise<MaintenanceOverview>;
+  // Solicitações
+  listRequests(ctx: AccessContext, query: RequestQuery): Promise<Paged<RequestListItem>>;
+  getRequest(ctx: AccessContext, id: Id): Promise<RequestDetail>;
+  createRequest(ctx: AccessContext, input: NewRequestInput): Promise<MaintenanceRequest>;
+  editRequest(ctx: AccessContext, id: Id, input: RequestEditInput): Promise<void>;
+  cancelRequest(ctx: AccessContext, id: Id, reason: string): Promise<void>;
+  startTriage(ctx: AccessContext, id: Id): Promise<void>;
+  convertToWorkOrder(ctx: AccessContext, id: Id, priority: MaintenancePriority): Promise<WorkOrder>;
+  resolveWithoutOrder(ctx: AccessContext, id: Id, priority: MaintenancePriority, reason: string): Promise<void>;
+  rejectRequest(ctx: AccessContext, id: Id, reason: string): Promise<void>;
+  markDuplicate(ctx: AccessContext, id: Id, originalId: Id, reason: string): Promise<void>;
+  redirectRequest(ctx: AccessContext, id: Id, input: { destinationId?: Id; destinationText?: string; reason: string }): Promise<void>;
+  resumeTriage(ctx: AccessContext, id: Id, reason: string): Promise<void>;
+  duplicateCandidates(ctx: AccessContext, id: Id): MaintenanceRequest[];
+  redirectDestinations(ctx: AccessContext): RedirectDestination[];
+  // Ordens de serviço e execução
+  listWorkOrders(ctx: AccessContext, query: WorkOrderQuery): Promise<Paged<WorkOrderListItem>>;
+  getWorkOrder(ctx: AccessContext, id: Id): Promise<WorkOrderDetail>;
+  technicianOptions(ctx: AccessContext, locationId: Id): TechnicianOption[];
+  planWorkOrder(ctx: AccessContext, id: Id, input: { technicianUserId: Id; plannedDate: string }): Promise<void>;
+  startExecution(ctx: AccessContext, id: Id): Promise<void>;
+  concludeExecution(ctx: AccessContext, id: Id, input: { workNotes: string; evidenceNames: string[] }): Promise<void>;
+  registerImpediment(ctx: AccessContext, id: Id, description: string): Promise<void>;
+  submitForClosure(ctx: AccessContext, id: Id): Promise<void>;
+  closeWorkOrder(ctx: AccessContext, id: Id, note: string): Promise<void>;
+  returnToExecution(ctx: AccessContext, id: Id, reason: string): Promise<void>;
+  suspendWorkOrder(ctx: AccessContext, id: Id, reason: string): Promise<void>;
+  resumeWorkOrder(ctx: AccessContext, id: Id): Promise<void>;
+  cancelWorkOrder(ctx: AccessContext, id: Id, reason: string): Promise<void>;
+  /** Hipótese demonstrativa (P-51): execução Interrompida, pendente de validação. */
+  interruptExecution(ctx: AccessContext, id: Id, reason: string): Promise<void>;
+  /** Solicitações e OS de um ativo (painel 360º da Central). */
+  forAsset(ctx: AccessContext, assetId: Id): Promise<{ requests: RequestListItem[]; orders: WorkOrderListItem[] }>;
+}
+
 export interface Services {
   session: SessionService;
   locations: LocationService;
@@ -895,5 +1076,6 @@ export interface Services {
   monitor: MonitorService;
   discovery: DiscoveryReviewService;
   dashboards: DashboardService;
+  maintenance: MaintenanceService;
   demo: DemoService;
 }

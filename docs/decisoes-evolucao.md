@@ -348,6 +348,24 @@ Implementados como a opção mais simples e reversível. Não são decisões apr
 
 ---
 
+## Comportamentos provisórios (etapa 5 — Gestão de Manutenção, 1ª entrega) — a validar
+
+Hipóteses adotadas **só para demonstrar o fluxo**. Não são decisões aprovadas. Na interface, aparecem com a marca "Provisório · P-xx". Regras aprovadas aplicadas nesta entrega: D-011 (DP-47), D-012 (DP-38, DP-40, DP-48, DP-49, DP-50, DP-51) e D-013 (DP-38, DP-48, matriz demonstrativa, Q-09).
+
+| # | Tema | Comportamento provisório (hipótese) | Base | Onde alterar |
+|---|------|--------------------------|------|--------------|
+| P-49 | Escala de prioridade | Prioridade percebida (solicitante) e definida (triagem) na mesma escala de 5 níveis da ocorrência: Crítica, Alta, Média, Baixa, Planejada. | DP-39 em proposta | `src/domain/maintenance.ts` |
+| P-50 | Ciclo-base de solicitação e OS | Status e transições das propostas DP-35 e DP-42 a DP-46. A OS **não** tem "Aguardando aprovação": os parâmetros da aprovação condicional seguem em aberto, então a OS vai de Aberta direto a Planejada. | DP-35, DP-42 a DP-46 em proposta | `maintenanceService.ts` |
+| P-51 | Execução "Interrompida" | Hipótese demonstrativa da DP-51 ajustada (D-013): execução em andamento pode ser interrompida com justificativa e responsável, preservando o trabalho parcial; depois a OS pode ser suspensa ou cancelada. **Quem pode interromper não foi decidido**; na demonstração, só o gestor (`manutencao.manage`). | DP-51 ajustada, aguardando validação | `interruptExecution` em `maintenanceService.ts` |
+| P-52 | Destinos externos | Três destinos de demonstração (TI, administração predial, limpeza) + "Outro (informar)". Nenhum objeto é criado no destino. | DP-38 aprovado; lista sem padrão no produto | `src/data/seed/maintenance.ts` |
+| P-53 | Conversão em OS | Cada conversão cria uma OS nova (1:1). Anexar a uma OS existente (DP-41: 1 OS para n solicitações) não está no protótipo. | DP-41 em proposta | `convertToWorkOrder` |
+| P-54 | Triagem obrigatória | É preciso "Assumir triagem" (Aberta → Em triagem) antes de decidir o destino. A triagem opcional configurável não está no protótipo. | docs/05: triagem configurável | `requireTriaging` |
+| P-55 | Papéis na demonstração | Triagem, planejamento, suspensão, cancelamento e encerramento: `manutencao.manage` (Administrador e Gestor de Manutenção). Execução: `manutencao.execute`, somente pelo técnico atribuído. Técnico passa a poder abrir solicitação e Gestor de Manutenção passa a poder executar, conforme a matriz demonstrativa (D-013). Operador de Rotinas não acessa Manutenção (sem `manutencao.view`). | Matriz demonstrativa (D-013) | `src/access/profiles.ts` |
+| P-56 | Retomar triagem | Permitido a quem faz triagem (`manutencao.manage`) no escopo, só com a OS vinculada Cancelada. Sem expiração: a solicitação fica "Convertida em OS" com o aviso de decisão pendente. | DP-50 aprovado; permissão em proposta | `resumeTriage` |
+| P-57 | Notificações | Somente no sino, para destinatários específicos: gestores com o local no escopo (nova solicitação, impedimento, aguardando encerramento, OS cancelada), técnico (atribuição, devolução, suspensão, retomada, interrupção) e solicitante (desfecho da triagem, OS encerrada ou cancelada). Quem executa a ação não é notificado. | Princípios da DP-07 | `notify` em `maintenanceService.ts`; `recipientUserIds` em `AppNotification` |
+| P-58 | Atraso, tempo e evidências | "Atrasada" = data prevista ultrapassada com a OS Planejada, Em execução ou Suspensa (indicador, não status). Tempo total, suspenso e líquido são informativos, sem desconto de SLA (D-013). Evidências são nomes de arquivo simulados ("+ Adicionar foto"); nenhum arquivo é enviado. | D-013; SLA a definir | `maintenanceService.ts`, `orderActions.tsx` |
+| P-59 | Recorte por local | Visão geral e listas da Manutenção respeitam a localização contextual do cabeçalho (como P-14). | P-14 | `MaintenanceHomePage.tsx`, `MaintenanceListsPages.tsx` |
+
 ## Dúvidas em aberto
 
 Não bloqueiam a etapa 1. Precisam de definição antes das etapas indicadas.

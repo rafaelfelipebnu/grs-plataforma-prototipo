@@ -23,6 +23,9 @@ import type {
   DiscoveryRun,
   MonitoringRule,
   PointReading,
+  MaintenanceRequest,
+  RedirectDestination,
+  WorkOrder,
 } from '@/domain';
 
 /**
@@ -64,6 +67,13 @@ export interface DemoDatabase {
   discoveryCandidates: DiscoveryCandidate[];
   monitoringRules: MonitoringRule[];
   pointReadings: PointReading[];
+  // Gestão de Manutenção
+  maintenanceRequests: MaintenanceRequest[];
+  workOrders: WorkOrder[];
+  /** Destinos externos de redirecionamento (DP-38, lista configurável — demonstração). */
+  redirectDestinations: RedirectDestination[];
+  /** Sequenciais dos códigos legíveis. */
+  maintenanceCounters: { request: number; workOrder: number };
   // Feed de eventos (Security Hub e fontes)
   events: OperationalEvent[];
   // Fonte integrada: passagens do Controle de Acesso (simulado)
@@ -83,4 +93,4 @@ export interface DemoDatabase {
 }
 
 /** Incrementar quando o formato mudar: dados persistidos antigos são descartados. */
-export const DEMO_SCHEMA_VERSION = 4;
+export const DEMO_SCHEMA_VERSION = 5;

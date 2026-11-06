@@ -10,6 +10,7 @@ import { createDemoGroupHistory, createDemoGroups } from './groups';
 import { createDemoRules } from './network';
 import { DEMO_COMPANY, DEMO_LOCATIONS, DEMO_ORG_LOCATION_MAPPINGS, DEMO_ORG_UNITS } from './organization';
 import { DEMO_PEOPLE, DEMO_USERS } from './people';
+import { DEMO_REDIRECT_DESTINATIONS, createDemoMaintenance } from './maintenance';
 
 /**
  * Cria o cenário de demonstração. Os horários são relativos a `now` para que
@@ -17,6 +18,7 @@ import { DEMO_PEOPLE, DEMO_USERS } from './people';
  */
 export function createDemoSeed(now: Date = new Date()): DemoDatabase {
   const at = (minutesAgo: number): ISODateString => new Date(now.getTime() - minutesAgo * 60_000).toISOString();
+  const maintenance = createDemoMaintenance(at, now);
 
   return structuredClone({
     meta: { schemaVersion: DEMO_SCHEMA_VERSION, seededAt: now.toISOString() },
@@ -42,6 +44,10 @@ export function createDemoSeed(now: Date = new Date()): DemoDatabase {
     discoveryCandidates: [],
     monitoringRules: createDemoRules(at),
     pointReadings: [],
+    maintenanceRequests: maintenance.requests,
+    workOrders: maintenance.orders,
+    redirectDestinations: DEMO_REDIRECT_DESTINATIONS,
+    maintenanceCounters: maintenance.counters,
     events: createDemoEvents(at),
     accessPassages: createDemoAccessPassages(at),
     dashboards: { clientDefault: createDefaultDashboard(at(1440)), personal: {} },

@@ -28,6 +28,12 @@ import { DiscoveryPage } from '@/modules/monitor/DiscoveryPage';
 import { MonitorAlertsPage, MonitorDevicesPage, MonitorHistoryPage, PointsPage } from '@/modules/monitor/MonitorListsPages';
 import { PointDetailPage } from '@/modules/monitor/PointDetailPage';
 import { RulesPage } from '@/modules/monitor/RulesPage';
+import { MaintenanceHomePage } from '@/modules/manutencao/MaintenanceHomePage';
+import { RequestsListPage, WorkOrdersListPage } from '@/modules/manutencao/MaintenanceListsPages';
+import { NewRequestPage } from '@/modules/manutencao/NewRequestPage';
+import { RequestDetailPage } from '@/modules/manutencao/RequestDetailPage';
+import { WorkOrderDetailPage } from '@/modules/manutencao/WorkOrderDetailPage';
+import { MyOrderPage, MyOrdersPage } from '@/modules/manutencao/MyOrdersPages';
 
 /** Endereço antigo de local: a visão por local vive na home da Central. */
 function LocationRedirect() {
@@ -40,6 +46,7 @@ const MODULE_INDEX: Partial<Record<ModuleId, JSX.Element>> = {
   'security-hub': <DashboardPage />,
   central: <CentralHomePage />,
   monitor: <MonitorOverviewPage />,
+  manutencao: <MaintenanceHomePage />,
 };
 
 /** Rotas de cada módulo (crescem a cada etapa). */
@@ -58,6 +65,15 @@ const MODULE_CHILD_ROUTES: Partial<Record<ModuleId, RouteObject[]>> = {
     { path: 'regras', element: <RulesPage /> },
     { path: 'alertas', element: <MonitorAlertsPage /> },
     { path: 'historico', element: <MonitorHistoryPage /> },
+  ],
+  manutencao: [
+    { path: 'solicitacoes', element: <RequestsListPage /> },
+    { path: 'solicitacoes/nova', element: <NewRequestPage /> },
+    { path: 'solicitacoes/:requestId', element: <RequestDetailPage /> },
+    { path: 'os', element: <WorkOrdersListPage /> },
+    { path: 'os/:orderId', element: <WorkOrderDetailPage /> },
+    { path: 'minhas-os', element: <MyOrdersPage /> },
+    { path: 'minhas-os/:orderId', element: <MyOrderPage /> },
   ],
   central: [
     { path: 'ativos/novo', element: <NewAssetPage /> },

@@ -92,6 +92,7 @@ export const PROFILES: Record<ProfileId, Profile> = {
       'manutencao.view',
       'manutencao.request',
       'manutencao.manage',
+      'manutencao.execute',
       'ocorrencias.view',
     ],
   },
@@ -99,7 +100,7 @@ export const PROFILES: Record<ProfileId, Profile> = {
     id: 'tecnico',
     name: 'Técnico',
     description: 'Executa ordens de serviço atribuídas e registra a execução e as evidências.',
-    permissions: ['central.view', 'manutencao.view', 'manutencao.execute'],
+    permissions: ['central.view', 'manutencao.view', 'manutencao.request', 'manutencao.execute'],
   },
   'operador-rotinas': {
     id: 'operador-rotinas',
