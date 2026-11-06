@@ -73,6 +73,6 @@ Security Hub é a porta de entrada integrada ao longo das fases.
 - Uma única aplicação evolutiva.
 - Protótipo de alta fidelidade, navegável e testável por clientes.
 - Backend, integrações, dados e dispositivos simulados.
-- Desktop-first responsivo; experiência móvel própria para execução de rotinas.
+- Desktop-first responsivo; experiência móvel própria para execução de rotinas e experiência móvel demonstrativa para execução de OS (online, na mesma aplicação — D-013). Arquitetura mobile, aplicativo nativo e offline de OS continuam em aberto.
 - Importação em lote e descoberta de dispositivos fazem parte do protótipo inicial, com revisão e confirmação antes de aplicar.
 - Validação de conceito e jornadas antes de aprofundar arquitetura produtiva.

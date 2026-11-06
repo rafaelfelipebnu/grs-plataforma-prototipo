@@ -33,7 +33,7 @@ Desenvolva um protótipo web de alta fidelidade para a plataforma GRS, orientado
 ## Princípios de implementação
 
 - Uma aplicação única, evolutiva e coerente; não vários protótipos independentes.
-- Desktop-first, responsiva; incluir experiência móvel específica para execução de rotinas.
+- Desktop-first, responsiva; incluir experiência móvel específica para execução de rotinas e experiência móvel demonstrativa para execução de OS (online, na mesma aplicação — D-013; arquitetura mobile, app nativo e offline de OS seguem em aberto).
 - Componentes reutilizáveis, tipagem explícita e dados de demonstração centralizados.
 - Persistência simulada local, com camada de serviço separada dos componentes para futura substituição por APIs.
 - Navegação real entre telas; links, botões, filtros, formulários, abas, modais e ações devem funcionar.
