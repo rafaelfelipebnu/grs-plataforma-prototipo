@@ -149,6 +149,8 @@ function RequestView({ d }: { d: RequestDetail }) {
                 <LabelValue label="Origem">
                   {r.origin === 'ocorrencia' && r.occurrenceId ? (
                     <ContextLink to={paths.occurrence(r.occurrenceId)}>Ocorrência de origem</ContextLink>
+                  ) : r.origin === 'evento' && r.sourceEventId ? (
+                    <ContextLink to={paths.event(r.sourceEventId)}>Evento de origem</ContextLink>
                   ) : r.origin === 'painel-ativo' ? (
                     'Painel 360º do ativo'
                   ) : (

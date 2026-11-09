@@ -13,6 +13,8 @@ import { occurrencePaths } from '@/modules/ocorrencias/shared';
 import { maintenancePaths } from '@/modules/manutencao/shared';
 import { ReturnBar } from '@/app/navigation/ReturnBar';
 import { paths } from '@/app/navigation/targets';
+import { LinkedRecordList, OpenRecordsNotice, useLinkedRecords } from '@/app/integration/LinkedRecords';
+import { isModuleAvailable } from '@/access';
 import { QueryBoundary } from '../QueryBoundary';
 import { LocationLink, PersonRef, SOURCE_LABEL } from './shared';
 import styles from '../Pages.module.css';
@@ -119,33 +121,70 @@ export function EventPage() {
                     </Panel>
                   </Col>
                 </Grid>
-                <Panel title="Encaminhamentos">
-                  {forward.register || forward.request ? (
+                <EventForwarding eventId={event.id} assetId={event.assetId} assetTag={d.asset?.tag} forward={forward} />
+                {(forward.register || forward.request) && (
+                  <Panel title="Encaminhar">
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                       {forward.register && (
                         <Button variant="secondary" icon="exclamation-triangle" onClick={() => navigateWithContext(occurrencePaths.register(event.id))}>
                           Registrar ocorrência
                         </Button>
                       )}
-                      {forward.request && event.assetId && (
-                        <Button variant="secondary" icon="wrench" onClick={() => navigateWithContext(maintenancePaths.newRequest(event.assetId))}>
+                      {forward.request && (
+                        <Button variant="secondary" icon="wrench" onClick={() => navigateWithContext(maintenancePaths.newRequestFromEvent(event.id))}>
                           Abrir solicitação de manutenção
                         </Button>
                       )}
                     </div>
-                  ) : (
-                    <p className="helper">Seu perfil ou o contrato não permitem registrar ocorrência ou abrir solicitação a partir deste evento.</p>
-                  )}
-                  <p className="helper" style={{ marginTop: 8 }}>
-                    O encaminhamento cria o registro no módulo especialista com a origem preservada. O status do evento não muda: reconhecer continua sendo uma ação
-                    do Security Hub.
-                  </p>
-                </Panel>
+                    <p className="helper" style={{ marginTop: 8 }}>
+                      O registro é criado no módulo responsável, com este evento como origem. O status do evento não muda: reconhecer o alerta continua sendo uma ação
+                      do Security Hub.
+                    </p>
+                  </Panel>
+                )}
               </Stack>
             </>
           );
         }}
       </QueryBoundary>
+    </>
+  );
+}
+
+/**
+ * Rastreabilidade do evento: o que foi criado a partir dele e o que já está em
+ * aberto para o ativo afetado. Consulta os módulos donos; nada é associado
+ * automaticamente e nada bloqueia um novo encaminhamento.
+ */
+function EventForwarding({
+  eventId,
+  assetId,
+  assetTag,
+  forward,
+}: {
+  eventId: string;
+  assetId?: string;
+  assetTag?: string;
+  forward: { register: boolean; request: boolean };
+}) {
+  const access = useAccess();
+  const fromEvent = useLinkedRecords({ eventId });
+  const canSee = isModuleAvailable(access, 'ocorrencias') || isModuleAvailable(access, 'manutencao');
+  if (!canSee) return null;
+  const originated = fromEvent.data ?? [];
+  return (
+    <>
+      <Panel title={`Registros originados deste evento${originated.length ? ` (${originated.length})` : ''}`}>
+        {fromEvent.loading && !fromEvent.data ? (
+          <p className="helper">Carregando registros…</p>
+        ) : (
+          <LinkedRecordList
+            records={originated}
+            empty={forward.register || forward.request ? 'Nenhuma ocorrência ou solicitação foi criada a partir deste evento.' : 'Nenhum registro originado deste evento no seu escopo.'}
+          />
+        )}
+      </Panel>
+      {assetId && <OpenRecordsNotice assetId={assetId} assetTag={assetTag} excludeIds={originated.map((r) => r.id)} />}
     </>
   );
 }

@@ -24,6 +24,7 @@ export const maintenancePaths = {
   requests: '/manutencao/solicitacoes',
   newRequest: (assetId?: string) => `/manutencao/solicitacoes/nova${assetId ? `?ativo=${encodeURIComponent(assetId)}` : ''}`,
   newRequestFromOccurrence: (occurrenceId: string) => `/manutencao/solicitacoes/nova?ocorrencia=${encodeURIComponent(occurrenceId)}`,
+  newRequestFromEvent: (eventId: string) => `/manutencao/solicitacoes/nova?evento=${encodeURIComponent(eventId)}`,
   request: (id: string) => `/manutencao/solicitacoes/${id}`,
   orders: '/manutencao/os',
   order: (id: string) => `/manutencao/os/${id}`,

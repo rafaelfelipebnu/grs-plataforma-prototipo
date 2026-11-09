@@ -1139,6 +1139,8 @@ export interface MaintenanceService {
   interruptExecution(ctx: AccessContext, id: Id, reason: string): Promise<void>;
   /** Solicitações e OS de um ativo (painel 360º da Central). */
   forAsset(ctx: AccessContext, assetId: Id): Promise<{ requests: RequestListItem[]; orders: WorkOrderListItem[] }>;
+  /** Dados do evento para pré-preencher a solicitação (origem preservada). null = evento inacessível. */
+  eventPrefill(ctx: AccessContext, eventId: Id): { event: OperationalEvent; locationId: Id; assetId?: Id } | null;
   /** Solicitações (e suas OS) originadas de um evento ou sobre um ativo — consulta para outros módulos. */
   linkedRecords(ctx: AccessContext, ref: LinkedRecordRef): Promise<LinkedRecord[]>;
   /** OS em andamento sobre ativos relevantes para a segurança (widget do Security Hub). */

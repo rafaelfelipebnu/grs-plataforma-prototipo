@@ -921,6 +921,14 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
 
     // ── Consultas para outros módulos (somente leitura) ───────────────
 
+    eventPrefill(ctx, eventId) {
+      if (!permissions(ctx).request) return null;
+      const db = rt.store.getSnapshot();
+      const event = db.events.find((e) => e.id === eventId);
+      if (!event || !canSeeEvent(ctx, event)) return null;
+      return { event, locationId: event.locationId, assetId: event.assetId };
+    },
+
     async linkedRecords(ctx, ref) {
       await simulateLatency(rt);
       if (!isModuleAvailable(ctx, 'manutencao')) return [];

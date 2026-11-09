@@ -8,7 +8,10 @@ import { errorMessage } from '@/modules/central/shared';
 import { useAccess } from '@/app/providers/SessionProvider';
 import { useServices } from '@/app/providers/ServicesProvider';
 import { useLocationOptions } from '@/app/hooks/useLocationOptions';
-import { usePageLabel } from '@/app/navigation/contextNavigation';
+import { ContextLink, usePageLabel } from '@/app/navigation/contextNavigation';
+import { ReturnBar } from '@/app/navigation/ReturnBar';
+import { paths } from '@/app/navigation/targets';
+import { OpenRecordsNotice } from '@/app/integration/LinkedRecords';
 import { ErrorState } from '@/components/ui';
 import { MaintenanceNav, PRIORITY_OPTIONS, ProvisionalTag, TextArea, maintenancePaths, maintenanceStyles as s } from './shared';
 
@@ -42,10 +45,16 @@ export function NewRequestPage() {
     () => (occurrenceParam ? services.occurrences.requestPrefill(access, occurrenceParam) : null),
     [occurrenceParam, services, access],
   );
-  const [title, setTitle] = useState(fromOccurrence ? `${fromOccurrence.typeName} — ${fromOccurrence.code}` : '');
-  const [description, setDescription] = useState(fromOccurrence?.description ?? '');
-  const [locationId, setLocationId] = useState(fromOccurrence?.locationId ?? fromAsset?.primaryLocationId ?? '');
-  const [assetId, setAssetId] = useState(fromOccurrence?.assetId ?? fromAsset?.id ?? '');
+  const eventParam = sp.get('evento');
+  const fromEvent = useMemo(
+    () => (eventParam && !occurrenceParam ? services.maintenance.eventPrefill(access, eventParam) : null),
+    [eventParam, occurrenceParam, services, access],
+  );
+  const eventAsset = fromEvent?.assetId ? assets.find((a) => a.id === fromEvent.assetId) : undefined;
+  const [title, setTitle] = useState(fromOccurrence ? `${fromOccurrence.typeName} — ${fromOccurrence.code}` : (fromEvent?.event.title ?? ''));
+  const [description, setDescription] = useState(fromOccurrence?.description ?? (fromEvent ? fromEvent.event.description : ''));
+  const [locationId, setLocationId] = useState(fromOccurrence?.locationId ?? fromEvent?.locationId ?? fromAsset?.primaryLocationId ?? '');
+  const [assetId, setAssetId] = useState(fromOccurrence?.assetId ?? eventAsset?.id ?? fromAsset?.id ?? '');
   const [priority, setPriority] = useState<MaintenancePriority>('media');
   const [errors, setErrors] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -78,6 +87,7 @@ export function NewRequestPage() {
         perceivedPriority: priority,
         origin: fromAsset && assetId === fromAsset.id ? 'painel-ativo' : 'manual',
         occurrenceId: fromOccurrence?.id,
+        sourceEventId: fromEvent?.event.id,
       });
       toast.show({ tone: 'success', title: `Solicitação ${created.code} aberta`, message: 'A equipe de manutenção foi avisada para a triagem.' });
       navigate(maintenancePaths.request(created.id), { replace: true });
@@ -88,8 +98,11 @@ export function NewRequestPage() {
     }
   };
 
+  const selectedAsset = assets.find((a) => a.id === assetId);
+
   return (
     <>
+      <ReturnBar />
       <PageHeader
         title="Nova solicitação"
         breadcrumb={[
@@ -120,11 +133,18 @@ export function NewRequestPage() {
               ocorrência.
             </Alert>
           )}
-          {!fromOccurrence && fromAsset && (
+          {!fromOccurrence && fromEvent && (
+            <Alert tone="info">
+              Aberta a partir do evento <ContextLink to={paths.event(fromEvent.event.id)}>{fromEvent.event.code}</ContextLink>. A origem fica registrada na solicitação;
+              o status do evento não muda.
+            </Alert>
+          )}
+          {!fromOccurrence && !fromEvent && fromAsset && (
             <Alert tone="info">
               Aberta a partir do painel 360º do ativo <strong>{fromAsset.tag}</strong>. O ativo e o local vêm da Central de Ativos e Ambientes.
             </Alert>
           )}
+          <OpenRecordsNotice assetId={selectedAsset?.id} assetTag={selectedAsset?.tag} />
           <TextField label="Título" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Vazamento na bomba de recalque" maxLength={120} />
           <TextArea id="sol-desc" label="Descrição" required value={description} onChange={setDescription} placeholder="O que foi observado, desde quando, impacto percebido." />
           <SelectField

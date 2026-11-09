@@ -11,6 +11,8 @@ import { useServices } from '@/app/providers/ServicesProvider';
 import { useLocationOptions } from '@/app/hooks/useLocationOptions';
 import { ContextLink, usePageLabel } from '@/app/navigation/contextNavigation';
 import { paths } from '@/app/navigation/targets';
+import { ReturnBar } from '@/app/navigation/ReturnBar';
+import { OpenRecordsNotice } from '@/app/integration/LinkedRecords';
 import { OccurrenceNav, occurrencePaths, occurrenceStyles as s } from './shared';
 
 /** "yyyy-MM-ddTHH:mm" no fuso local, para o campo datetime-local. */
@@ -88,8 +90,11 @@ export function NewOccurrencePage() {
     }
   };
 
+  const selectedAsset = assets.find((a) => a.id === assetId);
+
   return (
     <>
+      <ReturnBar />
       <PageHeader
         title="Registrar ocorrência"
         breadcrumb={[{ label: MODULES.ocorrencias.name, to: occurrencePaths.panel }, { label: 'Registrar' }]}
@@ -138,6 +143,7 @@ export function NewOccurrencePage() {
             helper="Opcional. Identidade do ativo da Central de Ativos e Ambientes."
           />
           <ProvisionalTag code="P-64">Campo provisório (evolução GRS)</ProvisionalTag>
+          <OpenRecordsNotice assetId={selectedAsset?.id} assetTag={selectedAsset?.tag} />
           <TextArea id="oc-desc" label="Descrição" required value={description} onChange={setDescription} />
           <TextField label="Data e horário da ocorrência" type="datetime-local" required value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
           <SelectField
