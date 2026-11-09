@@ -21,7 +21,8 @@ export type NavTarget =
   | { kind: 'work-order'; id: Id }
   | { kind: 'occurrence'; id: Id }
   | { kind: 'action-plan'; id: Id }
-  | { kind: 'routine-execution'; id: Id };
+  | { kind: 'routine-execution'; id: Id }
+  | { kind: 'routine-reinspections' };
 
 /**
  * Notificação da central compartilhada. LER a notificação (readByUserIds) é

@@ -9,7 +9,7 @@ import {
   type PlanStatus,
   type Permission,
 } from '@/domain';
-import type { ActionIndicator, PlanActionView, PlanCapabilities, PlanListItem, PlanService } from '../contracts';
+import type { ActionIndicator, PendingWorkItem, PlanActionView, PlanCapabilities, PlanListItem, PlanService } from '../contracts';
 import { ServiceError, forbidden, notContracted, notFound } from '../errors';
 import { inScope, locationIndexOf, matchesQuery, paginate, simulateLatency, type ServiceRuntime } from '../internal';
 import { OUT_OF_SCOPE_MESSAGE } from './guards';
@@ -711,6 +711,38 @@ export function createPlanService(rt: ServiceRuntime): PlanService {
         notify(draft, p, `Avaliação do plano ${p.code} recusada`, reason.trim(), [p.evaluatorUserId], ctx.user.id);
         return `Avaliação recusada; volta para o avaliador. Motivo: ${reason.trim()}`;
       });
+    },
+
+    // ── Consulta para outros módulos (somente leitura) ────────────────
+
+    async pendingWork(ctx, filter) {
+      await simulateLatency(rt);
+      if (!permissions(ctx).view) return [];
+      const db = rt.store.getSnapshot();
+      const index = locationIndexOf(db);
+      const out: PendingWorkItem[] = [];
+      const lastAt = (p: ActionPlan) => p.history[p.history.length - 1]?.at ?? p.createdAt;
+      for (const p of db.actionPlans.filter((x) => inScope(ctx, x.locationId) && (!filter.locationId || index.isDescendantOrSelf(x.locationId, filter.locationId)))) {
+        const can = capabilities(ctx, p);
+        const planFlags = flags(p);
+        const base = { moduleId: 'ocorrencias' as const, title: `${p.code} — ${p.title}`, locationPath: index.pathOf(p.locationId), target: { kind: 'action-plan' as const, id: p.id } };
+        if (can.decideApproval) out.push({ ...base, id: `pa-apr-${p.id}`, action: 'Aprovar conclusão do plano', since: lastAt(p), severity: 'media' });
+        if (can.evaluate) {
+          const late = planFlags.includes('Avaliação atrasada');
+          out.push({ ...base, id: `pa-ava-${p.id}`, action: late ? 'Avaliar eficácia (atrasada)' : 'Avaliar eficácia', since: lastAt(p), severity: late ? 'alta' : 'media' });
+        }
+        if (can.decideEvaluation) out.push({ ...base, id: `pa-dav-${p.id}`, action: 'Decidir avaliação de eficácia', since: lastAt(p), severity: 'media' });
+        if (can.conclude && planFlags.includes('Todas as ações finalizadas')) out.push({ ...base, id: `pa-con-${p.id}`, action: 'Concluir plano (ações finalizadas)', since: lastAt(p), severity: 'baixa' });
+        for (const a of p.actions) {
+          const view = actionView(ctx, db, p, a);
+          const late = view.indicators.some((i) => i.kind === 'atrasada');
+          if (view.can.resolveDependency) out.push({ ...base, id: `pa-dep-${a.id}`, action: `Decidir dependência cancelada (ação ${a.number})`, since: lastAt(p), severity: 'alta' });
+          if (view.can.start || view.can.conclude) {
+            out.push({ ...base, id: `pa-exe-${a.id}`, title: `${p.code} · ação ${a.number} — ${a.description}`, action: late ? 'Executar ação (atrasada)' : 'Executar ação', since: a.dueDate, severity: late ? 'alta' : 'media' });
+          }
+        }
+      }
+      return out;
     },
   };
 }

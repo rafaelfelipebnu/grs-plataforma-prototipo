@@ -61,7 +61,7 @@ export function SearchPage() {
           </form>
           <div className={styles.typeFilters} role="group" aria-label="Filtrar por tipo">
             {coverage.map((c) => {
-              const enabled = c.implemented && c.allowed;
+              const enabled = c.allowed;
               const active = selectedTypes.includes(c.type);
               return (
                 <button
@@ -70,7 +70,7 @@ export function SearchPage() {
                   className={[styles.typeToggle, active && styles.typeToggleActive].filter(Boolean).join(' ')}
                   aria-pressed={active}
                   disabled={!enabled}
-                  title={!c.implemented ? 'Disponível quando o módulo for implementado' : !c.allowed ? 'Sem acesso a este tipo' : undefined}
+                  title={!c.allowed ? 'Seu perfil ou o contrato não incluem este tipo' : undefined}
                   onClick={() => toggleType(c.type)}
                 >
                   <Icon name={SEARCH_TYPE_ICON[c.type]} /> {c.label}

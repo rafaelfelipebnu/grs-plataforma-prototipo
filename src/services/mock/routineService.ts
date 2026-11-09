@@ -8,9 +8,9 @@ import {
   type RoutineExecution,
   type RoutineExecutionStatus,
 } from '@/domain';
-import type { AnswerInput, ExecutionDetail, ExecutionListItem, RoutineService, SyncResult } from '../contracts';
+import type { AnswerInput, ExecutionDetail, ExecutionListItem, PendingWorkItem, RoutineService, SyncResult } from '../contracts';
 import { ServiceError, forbidden, notFound } from '../errors';
-import { inScope, locationIndexOf, matchesQuery, paginate, simulateLatency, type ServiceRuntime } from '../internal';
+import { inLocationFilter, inScope, locationIndexOf, matchesQuery, paginate, simulateLatency, type ServiceRuntime } from '../internal';
 import { OUT_OF_SCOPE_MESSAGE, requireModule } from './guards';
 import { createIntegrationOccurrence, recordReinspectionResult, reevaluateOccurrence } from './occurrenceService';
 
@@ -602,6 +602,80 @@ export function createRoutineService(rt: ServiceRuntime): RoutineService {
         }
       });
       return result;
+    },
+
+    // ── Consultas para outros módulos (somente leitura) ───────────────
+
+    async hubSummary(ctx, filter) {
+      await simulateLatency(rt);
+      requireModule(ctx, 'rotinas');
+      const db = rt.store.getSnapshot();
+      const planLocation = (planId: Id) => db.routinePlans.find((p) => p.id === planId)?.locationId;
+      const inFilter = (locationId: Id | undefined) => inLocationFilter(db, locationId, filter.locationId);
+      const dayAgo = now() - 86_400_000;
+      const list = db.routineExecutions.filter((e) => planVisible(ctx, db, e.planId) && inFilter(planLocation(e.planId)));
+      const missed = list.filter((e) => e.status === 'nao-realizada' && new Date(e.windowEnd ?? e.windowStart).getTime() >= dayAgo);
+      const pending = list.filter((e) => e.status === 'pendente');
+      const running = list.filter((e) => e.status === 'em-execucao');
+      const windowEnd = (e: RoutineExecution) => new Date(e.windowEnd ?? e.windowStart).getTime();
+      const reinspections = db.reinspectionRequests.filter((r) => {
+        if (r.status !== 'pendente') return false;
+        const o = db.occurrences.find((x) => x.id === r.occurrenceId);
+        return Boolean(o && inScope(ctx, o.locationId) && inFilter(o.locationId));
+      });
+      const ordered = [...missed.sort((a, b) => windowEnd(b) - windowEnd(a)), ...pending.sort((a, b) => windowEnd(a) - windowEnd(b)), ...running];
+      return {
+        items: ordered.slice(0, filter.limit ?? 5).map((e) => item(db, e)),
+        counts: { pendentes: pending.length, emExecucao: running.length, naoRealizadas24h: missed.length, reinspecoesAProgramar: reinspections.length },
+      };
+    },
+
+    async pendingWork(ctx, filter) {
+      await simulateLatency(rt);
+      if (!permissions(ctx).manage) return [];
+      const db = rt.store.getSnapshot();
+      const index = locationIndexOf(db);
+      const out: PendingWorkItem[] = [];
+      for (const r of db.reinspectionRequests.filter((x) => x.status === 'pendente')) {
+        const o = db.occurrences.find((x) => x.id === r.occurrenceId);
+        if (!o || !inScope(ctx, o.locationId) || !inLocationFilter(db, o.locationId, filter.locationId)) continue;
+        out.push({
+          id: `rot-rei-${r.id}`,
+          moduleId: 'rotinas',
+          action: 'Programar reinspeção',
+          title: `Reinspeção da ocorrência ${o.code}`,
+          locationPath: index.pathOf(o.locationId),
+          since: r.requestedAt,
+          severity: 'media',
+          target: { kind: 'routine-reinspections' },
+        });
+      }
+      return out;
+    },
+
+    async assetTimeline(ctx, assetId) {
+      await simulateLatency(rt);
+      if (!isModuleAvailable(ctx, 'rotinas')) return [];
+      const db = rt.store.getSnapshot();
+      const pointIds = new Set(db.controlPoints.filter((cp) => cp.assetId === assetId).map((cp) => cp.id));
+      if (!pointIds.size) return [];
+      return db.routineExecutions
+        .filter((e) => planVisible(ctx, db, e.planId) && e.status !== 'futura' && e.status !== 'pendente')
+        .filter((e) => e.points.some((p) => pointIds.has(p.pointId)))
+        .map((e) => {
+          const routine = db.routines.find((r) => r.id === e.routineId);
+          const point = e.points.find((p) => pointIds.has(p.pointId));
+          const nonConforming = point?.answers.some((a) => a.conforming === false);
+          return {
+            id: `${e.id}-asset`,
+            at: e.finishedAt ?? e.startedAt ?? e.windowStart,
+            actorName: userName(db, e.operatorUserId) ?? 'Sistema',
+            moduleId: 'rotinas' as const,
+            action: 'execucao',
+            summary: `${e.code} — ${routine?.name ?? 'Rotina'}: ${ROUTINE_STATUS_LABEL[e.status]}${nonConforming ? ' · não conformidade no ponto do ativo' : ''}`,
+            target: { kind: 'routine-execution' as const, id: e.id },
+          };
+        });
     },
   };
 }

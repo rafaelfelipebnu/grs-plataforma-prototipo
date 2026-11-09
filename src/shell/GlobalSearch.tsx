@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon, useDismiss, useToast } from '@/components/ui';
 import { SEARCH_TYPE_LABEL, type SearchResult } from '@/services';
@@ -70,11 +70,6 @@ export function GlobalSearch() {
       clearTimeout(timer);
     };
   }, [query, services, access]);
-
-  const pending = useMemo(
-    () => services.search.coverage(access).filter((c) => c.allowed && !c.implemented),
-    [services, access],
-  );
 
   const openResult = (result: SearchResult) => {
     const path = resolveTargetPath(result.target, access, services);
@@ -174,9 +169,7 @@ export function GlobalSearch() {
           {loading && results.length === 0 && <div className={styles.searchEmpty}>Carregando dados...</div>}
           {!loading && results.length === 0 && <div className={styles.searchEmpty}>Nenhum resultado encontrado para sua busca.</div>}
           <div className={styles.searchFooter}>
-            <span className="helper">
-              {pending.length > 0 && `${pending.map((p) => p.label).join(' e ')}: disponível quando o módulo for implementado.`}
-            </span>
+            <span className="helper">Ativos, locais, eventos, ocorrências, solicitações, OS, planos e rotinas do seu escopo.</span>
             <button type="button" className="toast-action-link" onClick={goToAll} style={{ border: 0, background: 'none', color: 'var(--sds-primary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               Ver todos os resultados
             </button>

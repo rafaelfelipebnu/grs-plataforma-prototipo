@@ -8,4 +8,7 @@ export const SEARCH_TYPE_ICON: Record<SearchResultType, string> = {
   event: 'bell',
   occurrence: 'exclamation-triangle',
   request: 'wrench',
+  'work-order': 'cogs',
+  'action-plan': 'tasks',
+  'routine-execution': 'check-square-o',
 };

@@ -36,11 +36,34 @@ describe('busca global', () => {
     expect(results.some((r) => r.type === 'asset' || r.type === 'device')).toBe(false);
   });
 
-  it('sinaliza ocorrências e solicitações como ainda não implementadas', () => {
-    const { services, ctx } = setup('u-admin');
+  it('encontra ocorrências, solicitações, OS, planos e execuções consultando os módulos donos', async () => {
+    const { services, ctx } = setup('u-seg');
+    const find = async (term: string) => (await services.search.search(ctx(), term)).map((r) => `${r.type}:${r.title.split(' ')[0]}`);
+    expect(await find('OC-0004')).toContain('occurrence:OC-0004');
+    expect(await find('SOL-0004')).toContain('request:SOL-0004');
+    expect(await find('OS-0002')).toContain('work-order:OS-0002');
+    expect(await find('PA-0001')).toContain('action-plan:PA-0001');
+    expect(await find('EX-0001')).toContain('routine-execution:EX-0001');
+  });
+
+  it('nos módulos especialistas, respeita escopo e permissão de cada perfil', async () => {
+    const seg = setup('u-seg');
+    const local = setup('u-local');
+    const tec = setup('u-tec');
+    // SOL-0007 é de Curitiba: fora do escopo de Joinville.
+    expect((await seg.services.search.search(seg.ctx(), 'SOL-0007')).some((r) => r.type === 'request')).toBe(true);
+    expect((await local.services.search.search(local.ctx(), 'SOL-0007')).some((r) => r.type === 'request')).toBe(false);
+    // O Técnico não acessa a Gestão de Ocorrências.
+    expect((await tec.services.search.search(tec.ctx(), 'OC-0004')).some((r) => r.type === 'occurrence')).toBe(false);
+    expect(tec.services.search.coverage(tec.ctx()).find((c) => c.type === 'occurrence')?.allowed).toBe(false);
+  });
+
+  it('não oferece tipos de módulos não contratados', async () => {
+    const { services, ctx } = setup('u-seg');
+    await services.demo.setContract('personalizado', ['security-hub']);
     const coverage = services.search.coverage(ctx());
-    expect(coverage.find((c) => c.type === 'occurrence')?.implemented).toBe(false);
-    expect(coverage.find((c) => c.type === 'request')?.implemented).toBe(false);
+    expect(coverage.find((c) => c.type === 'request')?.allowed).toBe(false);
+    expect((await services.search.search(ctx(), 'SOL-0004')).length).toBe(0);
   });
 });
 

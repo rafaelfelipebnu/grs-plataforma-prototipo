@@ -15,6 +15,7 @@ export const paths = {
   occurrence: (id: string) => `/ocorrencias/${id}`,
   plan: (id: string) => `/planos/${id}`,
   routineExecution: (id: string) => `/rotinas/execucoes/${id}`,
+  routineReinspections: '/rotinas/reinspecoes',
 };
 
 /**
@@ -44,6 +45,8 @@ export function resolveTargetPath(target: NavTarget, access: AccessContext, serv
       return paths.plan(target.id);
     case 'routine-execution':
       return paths.routineExecution(target.id);
+    case 'routine-reinspections':
+      return paths.routineReinspections;
     case 'event': {
       const info = services.events.routingInfo(access, target.id);
       if (!info) return null;

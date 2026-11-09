@@ -119,4 +119,4 @@ export interface DemoDatabase {
 }
 
 /** Incrementar quando o formato mudar: dados persistidos antigos são descartados. */
-export const DEMO_SCHEMA_VERSION = 9;
+export const DEMO_SCHEMA_VERSION = 10;

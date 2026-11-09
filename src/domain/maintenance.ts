@@ -115,9 +115,11 @@ export interface MaintenanceRequest {
   perceivedPriority: MaintenancePriority;
   /** Prioridade definida pela triagem. */
   definedPriority?: MaintenancePriority;
-  origin: 'manual' | 'painel-ativo' | 'ocorrencia';
+  origin: 'manual' | 'painel-ativo' | 'ocorrencia' | 'evento';
   /** Ocorrência de origem (origem preservada; Manutenção não altera a ocorrência). */
   occurrenceId?: Id;
+  /** Evento do Security Hub/Monitor de origem (origem preservada; o evento não muda). */
+  sourceEventId?: Id;
   requesterUserId: Id;
   createdAt: ISODateString;
   status: RequestStatus;

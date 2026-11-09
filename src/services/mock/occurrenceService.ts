@@ -4,7 +4,9 @@ import {
   OCCURRENCE_ORIGIN_LABEL,
   OCCURRENCE_PRIORITIES,
   OCCURRENCE_PRIORITY_LABEL,
+  OCCURRENCE_STATUS_LABEL,
   type Id,
+  type Severity,
   type Occurrence,
   type OccurrenceHistoryEntry,
   type OccurrencePriority,
@@ -22,6 +24,7 @@ import type {
   OccurrencePanelColumn,
   OccurrenceQuery,
   OccurrenceService,
+  PendingWorkItem,
 } from '../contracts';
 import { ServiceError, forbidden, notFound } from '../errors';
 import { canSeeEvent, inLocationFilter, inScope, locationIndexOf, matchesQuery, paginate, simulateLatency, type ServiceRuntime } from '../internal';
@@ -30,6 +33,8 @@ import { OUT_OF_SCOPE_MESSAGE, requireModule } from './guards';
 const MIN_TEXT = 5;
 const DAY_MS = 86_400_000;
 const PRIORITY_RANK: Record<OccurrencePriority, number> = { critica: 0, alta: 1, media: 2, baixa: 3, planejada: 4 };
+/** Correspondência visual com a escala de severidade do Hub (ordenação e sinalização apenas). */
+const OCCURRENCE_SEVERITY: Record<OccurrencePriority, Severity> = { critica: 'critica', alta: 'alta', media: 'media', baixa: 'baixa', planejada: 'informativa' };
 
 const validation = (message: string) => new ServiceError('VALIDATION', message);
 const conflict = (message: string) => new ServiceError('CONFLICT', message);
@@ -371,6 +376,7 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
     if (q.priority && o.priority !== q.priority) return false;
     if (q.typeId && o.typeId !== q.typeId) return false;
     if (q.origin && o.origin !== q.origin) return false;
+    if (q.assetId && o.assetId !== q.assetId) return false;
     if (q.locationId && (q.includeDescendants === false ? o.locationId !== q.locationId : !inLocationFilter(db, o.locationId, q.locationId))) return false;
     if (q.search?.trim()) {
       const asset = o.assetId ? db.assets.find((a) => a.id === o.assetId) : undefined;
@@ -947,6 +953,64 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
           .map((o) => item(db, o)),
         counts,
       };
+    },
+
+    // ── Consultas para outros módulos (somente leitura) ───────────────
+
+    async linkedRecords(ctx, ref) {
+      await simulateLatency(rt);
+      if (!isModuleAvailable(ctx, 'ocorrencias')) return [];
+      const db = rt.store.getSnapshot();
+      return visible(ctx, db)
+        .filter((o) => (!ref.eventId || o.sourceEventId === ref.eventId) && (!ref.assetId || o.assetId === ref.assetId))
+        .filter((o) => !ref.openOnly || o.status !== 'concluida')
+        .sort(byRecent)
+        .map((o) => ({
+          id: o.id,
+          moduleId: 'ocorrencias' as const,
+          code: o.code,
+          title: typeOf(db, o).name,
+          statusLabel: `${OCCURRENCE_STATUS_LABEL[o.status]} · prioridade ${OCCURRENCE_PRIORITY_LABEL[o.priority].toLowerCase()}`,
+          open: o.status !== 'concluida',
+          createdAt: o.createdAt,
+          target: { kind: 'occurrence' as const, id: o.id },
+        }));
+    },
+
+    async pendingWork(ctx, filter) {
+      await simulateLatency(rt);
+      if (!isModuleAvailable(ctx, 'ocorrencias')) return [];
+      const db = rt.store.getSnapshot();
+      const out: PendingWorkItem[] = [];
+      for (const o of visible(ctx, db).filter((x) => x.status !== 'concluida' && inLocationFilter(db, x.locationId, filter.locationId))) {
+        const t = typeOf(db, o);
+        const actions = actionsFor(db, ctx, o, t);
+        const base = { moduleId: 'ocorrencias' as const, title: `${o.code} — ${t.name}`, locationPath: locationIndexOf(db).pathOf(o.locationId), severity: OCCURRENCE_SEVERITY[o.priority], target: { kind: 'occurrence' as const, id: o.id } };
+        if (actions.proceed && o.status === 'sem-tratamento') out.push({ ...base, id: `oc-tra-${o.id}`, action: 'Tratar ocorrência sem tratamento', since: o.createdAt });
+        if (actions.decideApproval && o.approvalRequest) out.push({ ...base, id: `oc-apr-${o.id}`, action: 'Decidir aprovação da conclusão', since: o.approvalRequest.at });
+        const pendingLink = (o.linkSuggestions ?? []).find((x) => x.status === 'pendente');
+        if (actions.decideLinks && pendingLink) out.push({ ...base, id: `oc-vin-${o.id}`, action: 'Decidir sugestão de vínculo', since: pendingLink.at });
+      }
+      return out;
+    },
+
+    async assetTimeline(ctx, assetId) {
+      await simulateLatency(rt);
+      if (!isModuleAvailable(ctx, 'ocorrencias')) return [];
+      const db = rt.store.getSnapshot();
+      return visible(ctx, db)
+        .filter((o) => o.assetId === assetId)
+        .flatMap((o) =>
+          o.history.map((h, i) => ({
+            id: `${o.id}-h${i}`,
+            at: h.at,
+            actorName: userName(db, h.actorUserId),
+            moduleId: 'ocorrencias' as const,
+            action: h.kind,
+            summary: `${o.code}: ${h.text}`,
+            target: { kind: 'occurrence' as const, id: o.id },
+          })),
+        );
     },
   };
 }

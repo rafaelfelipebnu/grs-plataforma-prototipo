@@ -228,7 +228,17 @@ export interface NotificationService {
 
 // ── Busca global ─────────────────────────────────────────────────────
 
-export type SearchResultType = 'asset' | 'device' | 'location' | 'person' | 'event' | 'occurrence' | 'request';
+export type SearchResultType =
+  | 'asset'
+  | 'device'
+  | 'location'
+  | 'person'
+  | 'event'
+  | 'occurrence'
+  | 'request'
+  | 'work-order'
+  | 'action-plan'
+  | 'routine-execution';
 
 export interface SearchResult {
   type: SearchResultType;
@@ -242,8 +252,6 @@ export interface SearchResult {
 export interface SearchCoverage {
   type: SearchResultType;
   label: string;
-  /** false: o tipo existe na especificação, mas o módulo ainda não foi implementado. */
-  implemented: boolean;
   /** false: o perfil/contrato não permite este tipo. */
   allowed: boolean;
 }
@@ -556,6 +564,57 @@ export interface HistoryItem {
   moduleId: ModuleId | 'plataforma';
   action: string;
   summary: string;
+  /** Registro do módulo dono, quando a linha vem de outro módulo (consulta, sem cópia). */
+  target?: NavTarget;
+}
+
+// ── Integração entre módulos (consultas somente leitura) ─────────────
+
+/**
+ * Registro de um módulo especialista relacionado a um evento ou ativo.
+ * Projeção de consulta: o módulo continua dono do registro e de suas regras.
+ */
+export interface LinkedRecord {
+  id: Id;
+  moduleId: ModuleId;
+  /** Código legível (OC-0010, SOL-0008…). */
+  code: string;
+  title: string;
+  /** Status já traduzido pelo módulo dono. */
+  statusLabel: string;
+  /** Ainda em aberto no módulo dono (não concluído, encerrado ou cancelado). */
+  open: boolean;
+  createdAt: string;
+  target: NavTarget;
+}
+
+/** Referência para buscar registros relacionados. */
+export interface LinkedRecordRef {
+  /** Registros originados deste evento. */
+  eventId?: Id;
+  /** Registros sobre este ativo. */
+  assetId?: Id;
+  /** Somente os ainda em aberto. */
+  openOnly?: boolean;
+}
+
+/**
+ * Ação que aguarda o usuário em um módulo especialista. Informada pelo módulo
+ * dono conforme as permissões do perfil; o Security Hub só reúne e leva ao módulo.
+ */
+export interface PendingWorkItem {
+  id: string;
+  moduleId: ModuleId;
+  /** Verbo curto da ação: "Triar", "Tratar", "Avaliar eficácia"… */
+  action: string;
+  /** Registro de referência (código e descrição curta). */
+  title: string;
+  locationPath: Location[];
+  /** Desde quando aguarda. */
+  since: string;
+  /** Severidade para ordenar e sinalizar (alinhada à escala de severidade do Hub). */
+  severity: Severity;
+  target: NavTarget;
 }
 
 export interface AssetGroupLink {
@@ -967,6 +1026,8 @@ export interface NewRequestInput {
   origin: MaintenanceRequest['origin'];
   /** Ocorrência de origem (origin = 'ocorrencia'). */
   occurrenceId?: Id;
+  /** Evento de origem (origin = 'evento'): encaminhamento a partir do Security Hub. */
+  sourceEventId?: Id;
 }
 
 export type RequestEditInput = Pick<NewRequestInput, 'title' | 'description' | 'perceivedPriority'>;
@@ -1078,6 +1139,14 @@ export interface MaintenanceService {
   interruptExecution(ctx: AccessContext, id: Id, reason: string): Promise<void>;
   /** Solicitações e OS de um ativo (painel 360º da Central). */
   forAsset(ctx: AccessContext, assetId: Id): Promise<{ requests: RequestListItem[]; orders: WorkOrderListItem[] }>;
+  /** Solicitações (e suas OS) originadas de um evento ou sobre um ativo — consulta para outros módulos. */
+  linkedRecords(ctx: AccessContext, ref: LinkedRecordRef): Promise<LinkedRecord[]>;
+  /** OS em andamento sobre ativos relevantes para a segurança (widget do Security Hub). */
+  hubSummary(ctx: AccessContext, filter: LocationFilter & { limit?: number }): Promise<{ orders: WorkOrderListItem[]; total: number }>;
+  /** Ações que aguardam o usuário na Manutenção (triagem, encerramento, impedimentos, execução). */
+  pendingWork(ctx: AccessContext, filter: LocationFilter): Promise<PendingWorkItem[]>;
+  /** Histórico de solicitações e OS do ativo, para a linha do tempo do painel 360º. */
+  assetTimeline(ctx: AccessContext, assetId: Id): Promise<HistoryItem[]>;
 }
 
 // ── Gestão de Ocorrências ────────────────────────────────────────────
@@ -1108,6 +1177,8 @@ export interface OccurrenceQuery extends LocationFilter {
   typeId?: Id;
   origin?: OccurrenceOrigin;
   search?: string;
+  /** Somente ocorrências deste ativo. */
+  assetId?: Id;
   page?: number;
   pageSize?: number;
 }
@@ -1257,6 +1328,12 @@ export interface OccurrenceService {
   requestPrefill(ctx: AccessContext, id: Id): { id: Id; code: string; typeName: string; description: string; locationId: Id; assetId?: Id } | null;
   /** Resumo para os widgets do Security Hub. */
   hubSummary(ctx: AccessContext, filter: LocationFilter & { limit?: number }): Promise<OccurrenceHubSummary>;
+  /** Ocorrências originadas de um evento ou sobre um ativo — consulta para outros módulos. */
+  linkedRecords(ctx: AccessContext, ref: LinkedRecordRef): Promise<LinkedRecord[]>;
+  /** Ações que aguardam o usuário (sem tratamento, aprovação de conclusão, conclusão liberada). */
+  pendingWork(ctx: AccessContext, filter: LocationFilter): Promise<PendingWorkItem[]>;
+  /** Histórico das ocorrências do ativo, para a linha do tempo do painel 360º. */
+  assetTimeline(ctx: AccessContext, assetId: Id): Promise<HistoryItem[]>;
 }
 
 // ── Planos de Ação (capacidade compartilhada) ────────────────────────
@@ -1426,6 +1503,8 @@ export interface PlanService {
   keepActionOpen(ctx: AccessContext, planId: Id, actionId: Id, reason: string): Promise<void>;
   evaluate(ctx: AccessContext, planId: Id, input: { result: EffectivenessResult; justification: string }): Promise<void>;
   decideEvaluation(ctx: AccessContext, planId: Id, approve: boolean, reason: string): Promise<void>;
+  /** Ações que aguardam o usuário nos planos (aprovar, avaliar eficácia, decidir avaliação, executar ação). */
+  pendingWork(ctx: AccessContext, filter: LocationFilter): Promise<PendingWorkItem[]>;
 }
 
 // ── Gestão de Rotinas (produto existente) ────────────────────────────
@@ -1550,6 +1629,18 @@ export interface RoutineService {
   cancelPoint(ctx: AccessContext, executionId: Id, pointId: Id, reason: string): Promise<void>;
   finishExecution(ctx: AccessContext, executionId: Id, justification?: string): Promise<{ status: RoutineExecutionStatus; synced: boolean }>;
   sync(ctx: AccessContext): Promise<SyncResult>;
+  /** Rotinas pendentes ou não realizadas e reinspeções a programar (widget do Security Hub). */
+  hubSummary(ctx: AccessContext, filter: LocationFilter & { limit?: number }): Promise<RoutineHubSummary>;
+  /** Ações que aguardam o usuário em Rotinas (reinspeções a programar). */
+  pendingWork(ctx: AccessContext, filter: LocationFilter): Promise<PendingWorkItem[]>;
+  /** Execuções que passaram por pontos de controle do ativo, para a linha do tempo do painel 360º. */
+  assetTimeline(ctx: AccessContext, assetId: Id): Promise<HistoryItem[]>;
+}
+
+export interface RoutineHubSummary {
+  /** Pendentes, em execução ou não realizadas recentes, das mais urgentes para as menos. */
+  items: ExecutionListItem[];
+  counts: { pendentes: number; emExecucao: number; naoRealizadas24h: number; reinspecoesAProgramar: number };
 }
 
 export interface Services {

@@ -8,6 +8,7 @@ import {
   type AppNotification,
   type Id,
   type MaintenanceHistoryEntry,
+  type MaintenancePriority,
   type MaintenanceRequest,
   type RequestStatus,
   type Severity,
@@ -15,9 +16,12 @@ import {
   type WorkOrderStatus,
 } from '@/domain';
 import type {
+  HistoryItem,
+  LinkedRecord,
   MaintenanceHistoryView,
   MaintenanceOverview,
   MaintenanceService,
+  PendingWorkItem,
   RequestListItem,
   RequestQuery,
   WorkOrderActions,
@@ -25,12 +29,26 @@ import type {
   WorkOrderQuery,
 } from '../contracts';
 import { ServiceError, forbidden, notFound } from '../errors';
-import { inLocationFilter, inScope, locationIndexOf, matchesQuery, paginate, simulateLatency, type ServiceRuntime } from '../internal';
+import {
+  canSeeEvent,
+  inLocationFilter,
+  inScope,
+  locationIndexOf,
+  matchesQuery,
+  paginate,
+  securityRelevantAssetIds,
+  simulateLatency,
+  type ServiceRuntime,
+} from '../internal';
 import { OUT_OF_SCOPE_MESSAGE, requireModule } from './guards';
 
 const MIN_TEXT = 5;
 const ACTIVE_ORDER: WorkOrderStatus[] = ['aberta', 'planejada', 'em-execucao', 'suspensa', 'aguardando-encerramento'];
 const CANCELLABLE: WorkOrderStatus[] = ['aberta', 'planejada', 'em-execucao', 'suspensa'];
+const OPEN_REQUEST: RequestStatus[] = ['aberta', 'em-triagem'];
+const PRIORITY_RANK: Record<MaintenancePriority, number> = { critica: 0, alta: 1, media: 2, baixa: 3, planejada: 4 };
+/** Correspondência visual com a escala de severidade do Hub (ordenação e sinalização apenas). */
+const PRIORITY_SEVERITY: Record<MaintenancePriority, Severity> = { critica: 'critica', alta: 'alta', media: 'media', baixa: 'baixa', planejada: 'informativa' };
 
 const validation = (message: string) => new ServiceError('VALIDATION', message);
 const conflict = (message: string) => new ServiceError('CONFLICT', message);
@@ -349,6 +367,10 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
       if (input.occurrenceId && (!occurrence || !inScope(ctx, occurrence.locationId) || !isModuleAvailable(ctx, 'ocorrencias'))) {
         errors.push('Ocorrência de origem inválida.');
       }
+      const sourceEvent = input.sourceEventId ? db.events.find((e) => e.id === input.sourceEventId) : undefined;
+      if (input.sourceEventId && (!sourceEvent || !canSeeEvent(ctx, sourceEvent))) {
+        errors.push('Evento de origem inválido.');
+      }
       if (errors.length) throw validation(errors.join(' '));
       let created!: MaintenanceRequest;
       rt.store.mutate((draft) => {
@@ -361,8 +383,9 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
           locationId: input.locationId,
           assetId: input.assetId || undefined,
           perceivedPriority: input.perceivedPriority,
-          origin: occurrence ? 'ocorrencia' : input.origin,
+          origin: occurrence ? 'ocorrencia' : sourceEvent ? 'evento' : input.origin,
           occurrenceId: occurrence?.id,
+          sourceEventId: occurrence ? undefined : sourceEvent?.id,
           requesterUserId: ctx.user.id,
           createdAt: rt.now().toISOString(),
           status: 'aberta',
@@ -370,7 +393,15 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
           history: [
             log(
               ctx,
-              `Solicitação aberta${occurrence ? ` a partir da ocorrência ${occurrence.code}` : input.origin === 'painel-ativo' ? ' a partir do painel 360º do ativo' : ''}. Prioridade percebida: ${MAINTENANCE_PRIORITY_LABEL[input.perceivedPriority]}.`,
+              `Solicitação aberta${
+                occurrence
+                  ? ` a partir da ocorrência ${occurrence.code}`
+                  : sourceEvent
+                    ? ` a partir do evento ${sourceEvent.code}`
+                    : input.origin === 'painel-ativo'
+                      ? ' a partir do painel 360º do ativo'
+                      : ''
+              }. Prioridade percebida: ${MAINTENANCE_PRIORITY_LABEL[input.perceivedPriority]}.`,
             ),
           ],
         };
@@ -886,6 +917,113 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
         requests: visibleRequests(ctx, db).filter((r) => r.assetId === assetId).sort(byNewest).map((r) => requestItem(db, r)),
         orders: visibleOrders(ctx, db).filter((o) => o.assetId === assetId).sort(byNewest).map((o) => orderItem(db, o)),
       };
+    },
+
+    // ── Consultas para outros módulos (somente leitura) ───────────────
+
+    async linkedRecords(ctx, ref) {
+      await simulateLatency(rt);
+      if (!isModuleAvailable(ctx, 'manutencao')) return [];
+      const db = rt.store.getSnapshot();
+      const records: LinkedRecord[] = [];
+      const requests = visibleRequests(ctx, db)
+        .filter((r) => (!ref.eventId || r.sourceEventId === ref.eventId) && (!ref.assetId || r.assetId === ref.assetId))
+        .sort(byNewest);
+      for (const r of requests) {
+        const order = r.workOrderId ? db.workOrders.find((o) => o.id === r.workOrderId) : undefined;
+        const open = OPEN_REQUEST.includes(r.status) || (r.status === 'convertida' && !!order && ACTIVE_ORDER.includes(order.status));
+        if (ref.openOnly && !open) continue;
+        records.push({
+          id: r.id,
+          moduleId: 'manutencao',
+          code: r.code,
+          title: r.title,
+          statusLabel: order ? `${REQUEST_STATUS_LABEL[r.status]} · ${order.code} ${WORK_ORDER_STATUS_LABEL[order.status]}` : REQUEST_STATUS_LABEL[r.status],
+          open,
+          createdAt: r.createdAt,
+          target: requestTarget(r.id),
+        });
+      }
+      // OS do ativo abertas sem solicitação de origem visível (ex.: geradas pelo planejamento).
+      if (ref.assetId && !ref.eventId) {
+        const covered = new Set(requests.map((r) => r.workOrderId).filter(Boolean));
+        for (const o of visibleOrders(ctx, db).filter((x) => x.assetId === ref.assetId && !covered.has(x.id)).sort(byNewest)) {
+          const open = ACTIVE_ORDER.includes(o.status);
+          if (ref.openOnly && !open) continue;
+          records.push({ id: o.id, moduleId: 'manutencao', code: o.code, title: o.title, statusLabel: WORK_ORDER_STATUS_LABEL[o.status], open, createdAt: o.createdAt, target: orderTarget(o.id) });
+        }
+      }
+      return records;
+    },
+
+    async hubSummary(ctx, filter) {
+      await simulateLatency(rt);
+      requireModule(ctx, 'manutencao');
+      const db = rt.store.getSnapshot();
+      const relevant = securityRelevantAssetIds(db);
+      const list = visibleOrders(ctx, db)
+        .filter((o) => ACTIVE_ORDER.includes(o.status) && !!o.assetId && relevant.has(o.assetId))
+        .filter((o) => matchOrder(db, ctx, o, { locationId: filter.locationId, includeDescendants: filter.includeDescendants }))
+        .map((o) => orderItem(db, o))
+        .sort((a, b) => Number(b.overdue) - Number(a.overdue) || PRIORITY_RANK[a.order.priority] - PRIORITY_RANK[b.order.priority] || byNewest(a.order, b.order));
+      return { orders: list.slice(0, filter.limit ?? 5), total: list.length };
+    },
+
+    async pendingWork(ctx, filter) {
+      await simulateLatency(rt);
+      if (!isModuleAvailable(ctx, 'manutencao')) return [];
+      const db = rt.store.getSnapshot();
+      const perm = permissions(ctx);
+      const inFilter = (locationId: Id) => inLocationFilter(db, locationId, filter.locationId);
+      const index = locationIndexOf(db);
+      const items: PendingWorkItem[] = [];
+      if (perm.triage) {
+        for (const r of visibleRequests(ctx, db).filter((x) => inFilter(x.locationId))) {
+          const item = requestItem(db, r);
+          if (r.status !== 'aberta' && r.status !== 'em-triagem' && !item.awaitingTriageDecision) continue;
+          items.push({
+            id: `man-tri-${r.id}`,
+            moduleId: 'manutencao',
+            action: item.awaitingTriageDecision ? 'Decidir triagem (OS cancelada)' : 'Triar solicitação',
+            title: `${r.code} — ${r.title}`,
+            locationPath: index.pathOf(r.locationId),
+            since: r.createdAt,
+            severity: PRIORITY_SEVERITY[r.definedPriority ?? r.perceivedPriority],
+            target: requestTarget(r.id),
+          });
+        }
+      }
+      for (const o of visibleOrders(ctx, db).filter((x) => inFilter(x.locationId))) {
+        const lastAt = o.history[o.history.length - 1]?.at ?? o.createdAt;
+        const base = { moduleId: 'manutencao' as const, title: `${o.code} — ${o.title}`, locationPath: index.pathOf(o.locationId), severity: PRIORITY_SEVERITY[o.priority], target: orderTarget(o.id) };
+        if (perm.manageOrders && o.status === 'aguardando-encerramento') items.push({ ...base, id: `man-enc-${o.id}`, action: 'Validar e encerrar OS', since: lastAt });
+        if (perm.manageOrders && o.impediments.some((i) => !i.handled)) {
+          const imp = o.impediments.find((i) => !i.handled)!;
+          items.push({ ...base, id: `man-imp-${o.id}`, action: 'Avaliar impedimento', since: imp.at });
+        }
+        if (perm.execute && o.technicianUserId === ctx.user.id && (o.status === 'planejada' || o.status === 'em-execucao')) {
+          items.push({ ...base, id: `man-exe-${o.id}`, action: isOverdue(o) ? 'Executar OS (atrasada)' : 'Executar OS', since: lastAt });
+        }
+      }
+      return items;
+    },
+
+    async assetTimeline(ctx, assetId) {
+      await simulateLatency(rt);
+      if (!isModuleAvailable(ctx, 'manutencao')) return [];
+      const db = rt.store.getSnapshot();
+      const out: HistoryItem[] = [];
+      for (const r of visibleRequests(ctx, db).filter((x) => x.assetId === assetId)) {
+        r.history.forEach((h, i) =>
+          out.push({ id: `${r.id}-h${i}`, at: h.at, actorName: userName(db, h.actorUserId), moduleId: 'manutencao', action: 'solicitacao', summary: `${r.code}: ${h.text}`, target: requestTarget(r.id) }),
+        );
+      }
+      for (const o of visibleOrders(ctx, db).filter((x) => x.assetId === assetId)) {
+        o.history.forEach((h, i) =>
+          out.push({ id: `${o.id}-h${i}`, at: h.at, actorName: userName(db, h.actorUserId), moduleId: 'manutencao', action: 'os', summary: `${o.code}: ${h.text}`, target: orderTarget(o.id) }),
+        );
+      }
+      return out;
     },
   };
 }

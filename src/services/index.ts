@@ -52,6 +52,10 @@ export function createServices(options: CreateServicesOptions = {}): ServiceBund
     newId: (prefix) => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}`,
   };
   const central = createCentralService(runtime);
+  const maintenance = createMaintenanceService(runtime);
+  const occurrences = createOccurrenceService(runtime);
+  const plans = createPlanService(runtime);
+  const routines = createRoutineService(runtime);
   return {
     store,
     services: {
@@ -62,7 +66,8 @@ export function createServices(options: CreateServicesOptions = {}): ServiceBund
       people: createPeopleService(runtime),
       events: createEventService(runtime),
       notifications: createNotificationService(runtime),
-      search: createSearchService(runtime),
+      // A busca consulta os módulos especialistas, que aplicam as próprias regras.
+      search: createSearchService(runtime, { occurrences, maintenance, plans, routines }),
       hub: createSecurityHubService(runtime),
       central,
       monitor: createMonitorService(runtime),
@@ -70,10 +75,10 @@ export function createServices(options: CreateServicesOptions = {}): ServiceBund
       groups: createGroupService(runtime),
       dashboards: createDashboardService(runtime),
       demo: createDemoService(runtime),
-      maintenance: createMaintenanceService(runtime),
-      occurrences: createOccurrenceService(runtime),
-      plans: createPlanService(runtime),
-      routines: createRoutineService(runtime),
+      maintenance,
+      occurrences,
+      plans,
+      routines,
     },
   };
 }
