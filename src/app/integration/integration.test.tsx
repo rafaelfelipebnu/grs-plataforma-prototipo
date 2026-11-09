@@ -34,3 +34,28 @@ describe('rastreabilidade do evento (tela)', () => {
     expect(screen.getByRole('button', { name: 'Abrir solicitação de manutenção' })).toBeEnabled();
   });
 });
+
+describe('Central como referência compartilhada (tela)', () => {
+  it('aba Operação do ativo lista as ocorrências em aberto consultadas na Gestão de Ocorrências', async () => {
+    renderApp({ path: '/central/ativos/a-bmb014?aba=operacao', userId: 'u-seg' });
+    const heading = await screen.findByRole('heading', { name: /Ocorrências em aberto/ });
+    const panel = heading.closest('section') as HTMLElement;
+    expect(await within(panel).findByRole('link', { name: /OC-0009/ })).toBeInTheDocument();
+  });
+
+  it('histórico do ativo consolida Manutenção e Ocorrências, com filtro por módulo e link para o registro', async () => {
+    const user = userEvent.setup();
+    renderApp({ path: '/central/ativos/a-bmb014?aba=historico', userId: 'u-seg' });
+    const filter = await screen.findByRole('combobox', { name: 'Filtrar histórico por módulo' });
+    await waitFor(() => expect(within(filter).getByRole('option', { name: 'Gestão de Ocorrências' })).toBeInTheDocument());
+    expect(within(filter).getByRole('option', { name: 'Gestão de Manutenção' })).toBeInTheDocument();
+    await user.selectOptions(filter, 'ocorrencias');
+    expect((await screen.findAllByRole('link', { name: /^OC-0009:/ })).length).toBeGreaterThan(0);
+  });
+
+  it('o Técnico, sem acesso a Ocorrências, não vê ocorrências no ativo', async () => {
+    renderApp({ path: '/central/ativos/a-bmb014?aba=operacao', userId: 'u-tec' });
+    expect(await screen.findByText('Seu perfil não consulta ocorrências.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /OC-0009/ })).not.toBeInTheDocument();
+  });
+});

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { isModuleAvailable, moduleAccess } from '@/access';
 import {
   Badge,
@@ -36,8 +36,9 @@ import { useServices } from '@/app/providers/ServicesProvider';
 import { useServiceQuery } from '@/app/providers/useServiceQuery';
 import { ContextLink, usePageLabel } from '@/app/navigation/contextNavigation';
 import { ReturnBar } from '@/app/navigation/ReturnBar';
-import { paths } from '@/app/navigation/targets';
+import { paths, resolveTargetPath } from '@/app/navigation/targets';
 import { useAcknowledge } from '@/modules/security-hub/widgets/useAcknowledge';
+import { CentralOccurrencesPanel } from './CentralOccurrencesPanel';
 import { QueryBoundary } from '@/pages/QueryBoundary';
 import { AssetMaintenancePanel } from '@/modules/manutencao/AssetMaintenancePanel';
 import { LocationLink, PersonRef, SOURCE_LABEL } from '@/pages/records/shared';
@@ -304,13 +305,16 @@ function useModuleUsage(s: Asset360) {
   const access = useAccess();
   const services = useServices();
   return useServiceQuery(async () => {
-    const out: { points: { name: string; plan: string }[]; openOccurrences: number; occurrenceSearch: string } = { points: [], openOccurrences: 0, occurrenceSearch: s.asset.tag };
+    const out: { points: { name: string; plan: string }[]; openOccurrences: number; openMaintenance: number } = { points: [], openOccurrences: 0, openMaintenance: 0 };
     if (isModuleAvailable(access, 'rotinas')) {
       const catalog = await services.routines.catalog(access);
       out.points = catalog.flatMap((c) => c.points.filter((p) => p.assetId === s.asset.id).map((p) => ({ name: p.name, plan: c.plan.name })));
     }
     if (isModuleAvailable(access, 'ocorrencias')) {
-      out.openOccurrences = (await services.occurrences.list(access, { search: s.asset.tag, status: 'abertas', pageSize: 1 })).total;
+      out.openOccurrences = (await services.occurrences.list(access, { assetId: s.asset.id, status: 'abertas', pageSize: 1 })).total;
+    }
+    if (isModuleAvailable(access, 'manutencao')) {
+      out.openMaintenance = (await services.maintenance.linkedRecords(access, { assetId: s.asset.id, openOnly: true })).length;
     }
     return out;
   }, [s.asset.id, access]);
@@ -318,6 +322,7 @@ function useModuleUsage(s: Asset360) {
 
 function ModulesSection({ s }: { s: Asset360 }) {
   const access = useAccess();
+  const routerLocation = useLocation();
   const usage = useModuleUsage(s).data;
   const others = MODULE_IDS.filter((m) => m !== 'central');
   const describe = (moduleId: ModuleId): { tone: 'green' | 'gray' | 'yellow'; status: string; text: string } => {
@@ -342,18 +347,23 @@ function ModulesSection({ s }: { s: Asset360 }) {
         tone: 'green',
         status: points.length ? 'Em uso' : 'Contratado',
         text: points.length
-          ? `Referenciado por ${points.length} ponto(s) de controle: ${points.map((p) => `${p.name} (${p.plan})`).join('; ')}. O ponto do tipo Ativo usa a identidade da Central (D-007).`
+          ? `Referenciado por ${points.length} ponto(s) de controle: ${points.map((p) => `${p.name} (${p.plan})`).join('; ')}. O ponto do tipo Ativo usa a identidade do ativo cadastrada na Central.`
           : 'Nenhum ponto de controle referencia este ativo.',
       };
     }
     if (moduleId === 'ocorrencias') {
       const open = usage?.openOccurrences ?? 0;
-      return { tone: 'green', status: open ? 'Em uso' : 'Contratado', text: `${open} ocorrência(s) aberta(s) relacionada(s) a este ativo.` };
+      return { tone: 'green', status: open ? 'Em uso' : 'Contratado', text: `${open} ocorrência(s) em aberto relacionada(s) a este ativo. A lista está na aba Operação.` };
     }
     if (moduleId === 'manutencao') {
-      return { tone: 'green', status: 'Em uso', text: 'Solicitações e ordens de serviço deste ativo estão na aba Operação, que também permite abrir uma nova solicitação.' };
+      const open = usage?.openMaintenance ?? 0;
+      return {
+        tone: 'green',
+        status: open ? 'Em uso' : 'Contratado',
+        text: `${open} solicitação(ões) ou OS em aberto para este ativo. A lista e a abertura de nova solicitação estão na aba Operação.`,
+      };
     }
-    return { tone: 'green', status: 'Contratado', text: `Os dados deste ativo em ${module.name} serão exibidos aqui a partir da etapa ${module.buildStage} do protótipo.` };
+    return { tone: 'green', status: 'Contratado', text: `A visão de ${module.name} para este ativo ainda não está disponível nesta demonstração.` };
   };
   return (
     <Panel title="Módulos GRS sobre este ativo" flush>
@@ -379,9 +389,9 @@ function ModulesSection({ s }: { s: Asset360 }) {
                 </ContextLink>
               )}
               {moduleId === 'ocorrencias' && (usage?.openOccurrences ?? 0) > 0 && (
-                <ContextLink to={`/ocorrencias/consulta?status=abertas&busca=${encodeURIComponent(s.asset.tag)}`} className="helper">
-                  Ver ocorrências abertas do ativo
-                </ContextLink>
+                <Link to={{ search: '?aba=operacao' }} replace state={routerLocation.state} className="helper">
+                  Ver ocorrências na aba Operação
+                </Link>
               )}
               {moduleId === 'security-hub' && isModuleAvailable(access, 'security-hub') && s.events.some((e) => e.securityRelevant) && (
                 <p className="helper">Veja a aba Operação para reconhecer alertas.</p>
@@ -446,6 +456,7 @@ function OperationSection({ s }: { s: Asset360 }) {
           </div>
         )}
       </Panel>
+      <CentralOccurrencesPanel assetId={s.asset.id} />
       <AssetMaintenancePanel assetId={s.asset.id} />
     </Stack>
   );
@@ -458,13 +469,13 @@ function RisksSection() {
     <Panel title="Riscos">
       <EmptyState
         icon={state === 'not-contracted' ? 'lock' : 'balance-scale'}
-        title={state === 'not-contracted' ? 'Gestão de Riscos não contratada' : state === 'no-permission' ? 'Seu perfil não acessa a Gestão de Riscos' : 'Riscos do ativo — etapa 6'}
+        title={state === 'not-contracted' ? 'Gestão de Riscos não contratada' : state === 'no-permission' ? 'Seu perfil não acessa a Gestão de Riscos' : 'Riscos do ativo'}
         text={
           state === 'not-contracted'
             ? `${MODULES.riscos.valueProposition} Nenhum dado de risco é exibido sem a contratação.`
             : state === 'no-permission'
               ? undefined
-              : 'A avaliação de riscos e controles deste ativo será exibida quando a Gestão de Riscos for implementada. A metodologia ainda está em definição (Q-01).'
+              : 'A avaliação de riscos e controles deste ativo ainda não está disponível nesta demonstração.'
         }
       />
     </Panel>
@@ -552,10 +563,33 @@ function RelationshipsSection({ s }: { s: Asset360 }) {
   );
 }
 
+/**
+ * Linha do tempo do ativo: registros da Central e do Monitor (no painel 360º)
+ * somados aos que Manutenção, Ocorrências e Rotinas informam para o ativo —
+ * consultados nos módulos donos, com link para o registro de origem.
+ */
+function useAssetTimeline(s: Asset360) {
+  const access = useAccess();
+  const services = useServices();
+  return useServiceQuery(async () => {
+    const assetId = s.asset.id;
+    const parts = await Promise.all([
+      isModuleAvailable(access, 'manutencao') ? services.maintenance.assetTimeline(access, assetId) : Promise.resolve([]),
+      isModuleAvailable(access, 'ocorrencias') ? services.occurrences.assetTimeline(access, assetId) : Promise.resolve([]),
+      isModuleAvailable(access, 'rotinas') ? services.routines.assetTimeline(access, assetId) : Promise.resolve([]),
+    ]);
+    return [...s.history, ...parts.flat()].sort((a, b) => b.at.localeCompare(a.at));
+  }, [s, access]);
+}
+
 function HistorySection({ s }: { s: Asset360 }) {
+  const access = useAccess();
+  const services = useServices();
   const [source, setSource] = useState('');
-  const modules = Array.from(new Set(s.history.map((h) => h.moduleId)));
-  const items = s.history.filter((h) => !source || h.moduleId === source);
+  const timeline = useAssetTimeline(s);
+  const all = timeline.data ?? s.history;
+  const modules = Array.from(new Set(all.map((h) => h.moduleId)));
+  const items = all.filter((h) => !source || h.moduleId === source);
   return (
     <Panel
       title="Histórico"
@@ -580,16 +614,19 @@ function HistorySection({ s }: { s: Asset360 }) {
         <EmptyState compact icon="history" title="Nenhum registro no histórico." />
       ) : (
         <ul className={pageStyles.list}>
-          {items.map((h) => (
+          {items.map((h) => {
+            const to = h.target ? resolveTargetPath(h.target, access, services) : null;
+            return (
             <li key={h.id} className={pageStyles.listItem}>
               <div className={pageStyles.listItemMain}>
-                <div>{h.summary}</div>
+                <div>{to ? <ContextLink to={to}>{h.summary}</ContextLink> : h.summary}</div>
                 <div className="helper">
                   {formatDateTime(h.at)} · {h.actorName} · {h.moduleId === 'plataforma' ? 'Plataforma' : MODULES[h.moduleId].name}
                 </div>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
     </Panel>

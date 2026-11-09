@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { isModuleAvailable } from '@/access';
 import {
-  Alert,
   Button,
   Checkbox,
   EmptyState,
@@ -26,6 +25,7 @@ import { paths } from '@/app/navigation/targets';
 import { useAcknowledge } from '@/modules/security-hub/widgets/useAcknowledge';
 import { SOURCE_LABEL } from '@/pages/records/shared';
 import type { CentralTabProps } from '../CentralHomePage';
+import { CentralOccurrencesPanel } from '../CentralOccurrencesPanel';
 import type { CentralParams } from '../centralPaths';
 
 const PAGE_SIZE = 10;
@@ -33,8 +33,8 @@ const SEVERITIES: Severity[] = ['critica', 'alta', 'media', 'baixa', 'informativ
 
 /**
  * Alertas e ocorrências do local e descendentes (docs/02). Mostra o local de
- * origem de cada alerta; o detalhe abre no módulo proprietário.
- * Ocorrências entram na etapa 5 (Gestão de Ocorrências).
+ * origem de cada alerta; ocorrências são consultadas na Gestão de Ocorrências.
+ * O detalhe e as ações abrem no módulo proprietário.
  */
 export function EventsTab({ params, go }: CentralTabProps) {
   const access = useAccess();
@@ -76,11 +76,7 @@ export function EventsTab({ params, go }: CentralTabProps) {
 
   return (
     <Stack>
-      {!isModuleAvailable(access, 'ocorrencias') ? (
-        <Alert tone="info">Ocorrências aparecem aqui com a Gestão de Ocorrências contratada.</Alert>
-      ) : (
-        <Alert tone="info">As ocorrências deste local estão na Gestão de Ocorrências (Painel e Consulta). A consolidação nesta aba entra em entrega futura.</Alert>
-      )}
+      <CentralOccurrencesPanel locationId={params.local} includeDescendants={!params.somente} />
       <FilterPanel
         applied={applied}
         onRemove={(k) => go({ ...params, [k]: undefined, pagina: 1 })}
