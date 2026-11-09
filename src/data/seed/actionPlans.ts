@@ -37,7 +37,7 @@ export function createDemoActionPlans(at: (minutesAgo: number) => ISODateString,
       history: [
         { at: at(5 * 1440 - 50), actorUserId: 'u-seg', text: 'Plano criado em Rascunho a partir da ocorrência OC-0008.' },
         { at: at(5 * 1440 - 40), actorUserId: 'u-local', text: 'Plano ativado: Em andamento.' },
-        { at: at(1440), actorUserId: 'u-local', text: 'Ação A3 cancelada. Justificativa: Fornecedor descontinuou o modelo; avaliar alternativa. — A4 fica bloqueada até decisão (DP-32).' },
+        { at: at(1440), actorUserId: 'u-local', text: 'Ação A3 cancelada. Justificativa: Fornecedor descontinuou o modelo; avaliar alternativa. — A4 fica bloqueada até decisão.' },
       ],
     },
     {

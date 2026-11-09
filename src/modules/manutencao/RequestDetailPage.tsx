@@ -83,7 +83,7 @@ function RequestView({ d }: { d: RequestDetail }) {
     <Stack>
       {d.awaitingTriageDecision && (
         <Alert tone="warning" title="OS vinculada cancelada">
-          A {d.workOrder?.code} foi cancelada. A solicitação <strong>não</strong> foi cancelada automaticamente e continua "Convertida em OS" até a triagem decidir (DP-50).
+          A {d.workOrder?.code} foi cancelada. A solicitação <strong>não</strong> foi cancelada automaticamente e continua "Convertida em OS" até a triagem decidir.
           {d.actions.resumeTriage ? ' Use "Retomar triagem" para converter em nova OS, resolver sem OS ou rejeitar.' : ''}
         </Alert>
       )}
@@ -194,7 +194,7 @@ function RequestView({ d }: { d: RequestDetail }) {
           ok('Solicitação cancelada', r.code);
         }}
       >
-        <p className="helper">Permitido enquanto a solicitação está Aberta (DP-40). O cancelamento fica no histórico.</p>
+        <p className="helper">Permitido enquanto a solicitação está Aberta. O cancelamento fica no histórico.</p>
       </ReasonModal>
       <ConvertModal
         open={dialog === 'converter'}
@@ -231,7 +231,7 @@ function RequestView({ d }: { d: RequestDetail }) {
         }}
       >
         <p className="helper">
-          Decisão manual e autorizada (DP-50). <ProvisionalTag code="P-56">Permissão provisória</ProvisionalTag>
+          Decisão manual e autorizada. <ProvisionalTag code="P-56">Permissão provisória</ProvisionalTag>
         </p>
       </ReasonModal>
     </Stack>
@@ -318,7 +318,7 @@ function EditModal({ open, d, onClose, onDone }: { open: boolean; d: RequestDeta
         onDone();
       }}
     >
-      <p className="helper">Permitido enquanto Aberta (DP-40). Valores anteriores ficam no histórico.</p>
+      <p className="helper">Permitido enquanto Aberta. Valores anteriores ficam no histórico.</p>
       <TextField label="Título" required value={title} onChange={(e) => setTitle(e.target.value)} />
       <TextArea id="edit-desc" label="Descrição" required value={description} onChange={setDescription} />
       <SelectField label="Prioridade percebida" options={PRIORITY_OPTIONS} value={priority} onChange={(e) => setPriority(e.target.value as MaintenancePriority)} />
@@ -432,7 +432,7 @@ function RedirectModal({ open, d, onClose, onDone }: { open: boolean; d: Request
       }}
     >
       <p className="helper">
-        Redirecionar é encaminhamento <strong>externo</strong> (DP-38). Troca de equipe dentro da Manutenção é feita na própria triagem. Nada é criado no destino.
+        Redirecionar é encaminhamento <strong>externo</strong>. Troca de equipe dentro da Manutenção é feita na própria triagem. Nada é criado no destino.
       </p>
       <SelectField
         label="Destino"

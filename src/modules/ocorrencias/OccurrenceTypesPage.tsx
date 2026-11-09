@@ -28,8 +28,8 @@ export function OccurrenceTypesPage() {
       <OccurrenceNav />
       <Stack>
         <Alert tone="info">
-          {perm.configure ? 'A edição de tipos ' : 'A configuração de tipos é restrita ao administrador. A edição '}
-          entra em entrega futura; nesta demonstração os tipos são consultados.
+          {perm.configure ? '' : 'A configuração de tipos é restrita ao administrador. '}
+          Nesta demonstração os tipos de ocorrência são apenas consultados.
         </Alert>
         <Panel title={`Tipos (${types.length})`} flush>
           <div className={t.tableWrap}>

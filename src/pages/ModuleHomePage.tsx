@@ -8,8 +8,8 @@ import { usePageLabel } from '@/app/navigation/contextNavigation';
 import styles from './Pages.module.css';
 
 /**
- * Página inicial provisória de um módulo cuja implementação está prevista para
- * etapa posterior. Mostra o papel do módulo e o contexto ativo — sem simular
+ * Página inicial provisória de um módulo cujas telas ainda não fazem parte da
+ * demonstração. Mostra o papel do módulo e o contexto ativo — sem simular
  * telas ou dados que ainda não existem.
  */
 export function ModuleHomePage({ moduleId }: { moduleId: ModuleId }) {
@@ -24,9 +24,9 @@ export function ModuleHomePage({ moduleId }: { moduleId: ModuleId }) {
     <>
       <PageHeader title={module.name} breadcrumb={[{ label: module.name }]} description={module.summary} />
       <Stack>
-        <Alert tone="info" title={`Módulo previsto para a etapa ${module.buildStage} do protótipo`}>
-          A navegação, as permissões, o contrato e o contexto de localização deste módulo já estão ativos. As telas do módulo serão
-          implementadas na etapa {module.buildStage}.
+        <Alert tone="info" title="Em preparação para a demonstração">
+          A navegação, as permissões, o contrato e o contexto de localização deste módulo já estão ativos. As telas de {module.name} ainda não
+          estão disponíveis nesta demonstração.
         </Alert>
         <Panel title="Responsabilidades do módulo">
           <div className={styles.moduleHero}>

@@ -60,7 +60,7 @@ function Banner() {
     <div className={s.mobileBanner} role="note">
       <Icon name="mobile" />
       <span>
-        Experiência móvel demonstrativa do app de Gestão de Rotinas (conceitos do produto existente). Conexão, QR Code e geolocalização são simulados.
+        Experiência móvel demonstrativa do app de Gestão de Rotinas. Conexão, QR Code e geolocalização são simulados.
       </span>
     </div>
   );

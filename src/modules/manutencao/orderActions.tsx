@@ -66,7 +66,7 @@ export function useOrderActions(d: WorkOrderDetail | undefined) {
           ok('Impedimento registrado', 'O gestor avalia a suspensão da OS.');
         }}
       >
-        <p className="helper">O técnico registra o impedimento; a suspensão da OS é autorizada pelo gestor (D-013).</p>
+        <p className="helper">O técnico registra o impedimento; a suspensão da OS é autorizada pelo gestor.</p>
       </ReasonModal>
       <ReasonModal
         open={dialog === 'encerrar'}
@@ -79,7 +79,7 @@ export function useOrderActions(d: WorkOrderDetail | undefined) {
           ok('OS encerrada', 'Solicitante e técnico foram avisados.');
         }}
       >
-        <p className="helper">Encerrar valida o trabalho executado (DP-47). Não conclui ações de planos nem ocorrências vinculadas.</p>
+        <p className="helper">Encerrar valida o trabalho executado. Não conclui ações de planos nem ocorrências vinculadas.</p>
       </ReasonModal>
       <ReasonModal
         open={dialog === 'devolver'}
@@ -103,7 +103,7 @@ export function useOrderActions(d: WorkOrderDetail | undefined) {
         }}
       >
         <p className="helper">
-          Status próprio, autorizado pelo gestor (DP-48, D-013). O tempo suspenso é registrado e exibido à parte; <strong>não há desconto de SLA</strong> até a regra ser
+          Status próprio, autorizado pelo gestor. O tempo suspenso é registrado e exibido à parte; <strong>não há desconto de SLA</strong> até a regra ser
           definida.
         </p>
       </ReasonModal>
@@ -116,12 +116,12 @@ export function useOrderActions(d: WorkOrderDetail | undefined) {
         onCancel={close}
         onConfirm={async (text) => {
           await services.maintenance.cancelWorkOrder(access, d.order.id, text);
-          ok('OS cancelada', 'A solicitação não é cancelada: a triagem decide o próximo passo (DP-50).');
+          ok('OS cancelada', 'A solicitação não é cancelada: a triagem decide o próximo passo.');
         }}
       >
         <p className="helper">
           {d.executions.length
-            ? 'O trabalho parcial (execuções, evidências e comentários) é preservado e a OS fica identificada como cancelada com trabalho parcial (DP-51).'
+            ? 'O trabalho parcial (execuções, evidências e comentários) é preservado e a OS fica identificada como cancelada com trabalho parcial.'
             : 'A OS será cancelada sem execução.'}
         </p>
       </ReasonModal>
@@ -226,7 +226,7 @@ function ConcludeModal({ open, d, onClose, onDone }: { open: boolean; d: WorkOrd
           </button>
         </div>
       </div>
-      <p className="helper">Concluir a execução não encerra a OS: o encerramento é do gestor (DP-47).</p>
+      <p className="helper">Concluir a execução não encerra a OS: o encerramento é do gestor.</p>
     </ActionModal>
   );
 }

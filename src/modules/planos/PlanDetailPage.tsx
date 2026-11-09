@@ -81,7 +81,7 @@ function PlanView({ d }: { d: PlanDetail }) {
       {p.status === 'cancelado' && <Alert tone="info" title="Plano cancelado">{p.cancelReason}</Alert>}
       {p.status === 'concluido' && (
         <Alert tone="success" title="Plano concluído">
-          Concluído é final: não há reabertura (DP-23). Concluir o plano não conclui as ocorrências vinculadas.
+          Concluído é final: não há reabertura. Concluir o plano não conclui as ocorrências vinculadas.
         </Alert>
       )}
 
@@ -151,7 +151,7 @@ function PlanView({ d }: { d: PlanDetail }) {
                 <LabelValue label="Origem (imutável)">
                   {PLAN_ORIGIN_LABEL[p.origin.module]}
                   {d.originOccurrenceCode && ` — ${d.originOccurrenceCode}`}
-                  <div className="helper">{formatDateTime(p.origin.at)}. Origem não confere propriedade (D-011).</div>
+                  <div className="helper">{formatDateTime(p.origin.at)}. Origem não confere propriedade.</div>
                 </LabelValue>
                 <LabelValue label="Local (contexto)">
                   <LocationPath path={d.locationPath} />
@@ -212,7 +212,7 @@ function PlanView({ d }: { d: PlanDetail }) {
             <Panel title="Indicadores">
               {d.flags.length ? d.flags.map((f) => <Badge key={f} tone="orange">{f}</Badge>) : <p className="helper">Nenhum indicador ativo.</p>}
               <p className="helper" style={{ marginTop: 8 }}>
-                <Icon name="info-circle" /> "Plano em risco" considera prazo, progresso e dependências, com sinais configuráveis e <strong>sem valores padrão</strong> (DP-26). Nenhum sinal configurado nesta demonstração.
+                <Icon name="info-circle" /> "Plano em risco" considera prazo, progresso e dependências, com sinais configuráveis e <strong>sem valores padrão</strong>. Nenhum sinal configurado nesta demonstração.
               </p>
             </Panel>
             <Panel title="Histórico" flush>
@@ -233,7 +233,7 @@ function PlanView({ d }: { d: PlanDetail }) {
 
       {/* ── Diálogos do plano ── */}
       <ReasonModal open={dialog?.kind === 'pausar'} title="Pausar plano" label="Justificativa" confirmLabel="Pausar" onCancel={close} onConfirm={async (r) => { await services.plans.pause(access, p.id, r); ok('Plano pausado'); }}>
-        <p className="helper">As ações mantêm seus status individuais e não avançam durante a pausa. Não existe status "Pausada" para ações (DP-34).</p>
+        <p className="helper">As ações mantêm seus status individuais e não avançam durante a pausa. Não existe status "Pausada" para ações.</p>
       </ReasonModal>
       <ReasonModal open={dialog?.kind === 'cancelar'} title="Cancelar plano" label="Justificativa" confirmLabel="Cancelar plano" destructive onCancel={close} onConfirm={async (r) => { await services.plans.cancel(access, p.id, r); ok('Plano cancelado', 'Ações concluídas foram preservadas.'); }}>
         <p className="helper">Ações não finalizadas passam a Canceladas. Plano cancelado nunca satisfaz a exigência de plano de uma ocorrência.</p>
@@ -255,12 +255,12 @@ function PlanView({ d }: { d: PlanDetail }) {
       {current && (
         <>
           <ConcludeActionModal open={dialog?.kind === 'acao-concluir'} v={current} planId={p.id} onClose={close} onDone={() => ok(`Ação A${current.action.number} concluída`, 'Concluir a ação não conclui o plano.')} />
-          <ReasonModal open={dialog?.kind === 'acao-cancelar'} title={`Cancelar ação A${current.action.number}`} label="Justificativa" confirmLabel="Cancelar ação" destructive onCancel={close} onConfirm={async (r) => { await services.plans.cancelAction(access, p.id, current.action.id, r); ok('Ação cancelada', 'Ações dependentes ficam bloqueadas até decisão (DP-32).'); }} />
+          <ReasonModal open={dialog?.kind === 'acao-cancelar'} title={`Cancelar ação A${current.action.number}`} label="Justificativa" confirmLabel="Cancelar ação" destructive onCancel={close} onConfirm={async (r) => { await services.plans.cancelAction(access, p.id, current.action.id, r); ok('Ação cancelada', 'Ações dependentes ficam bloqueadas até decisão.'); }} />
           <RescheduleModal open={dialog?.kind === 'acao-reprogramar'} current={current.action.dueDate} title={`Reprogramar ação A${current.action.number}`} onClose={close} onConfirm={async (date, reason) => { await services.plans.rescheduleAction(access, p.id, current.action.id, date, reason); ok('Prazo da ação reprogramado'); }} />
           <DependencyModal open={dialog?.kind === 'acao-dependencia'} v={current} d={d} onClose={close} onDone={() => ok('Dependência revisada', 'A decisão ficou no histórico.')} onCancelAction={() => setDialog({ kind: 'acao-cancelar', actionId: current.action.id })} />
           <LinkRequestModal open={dialog?.kind === 'acao-solicitacao'} v={current} planId={p.id} onClose={close} onDone={() => ok('Solicitação vinculada à ação')} />
           <ReasonModal open={dialog?.kind === 'acao-manter'} title="Manter ação aberta" label="Justificativa" confirmLabel="Manter aberta" onCancel={close} onConfirm={async (r) => { await services.plans.keepActionOpen(access, p.id, current.action.id, r); ok('Ação mantida aberta'); }}>
-            <p className="helper">A execução vinculada teve desfecho, mas a ação continua aberta por decisão do executor (DP-33).</p>
+            <p className="helper">A execução vinculada teve desfecho, mas a ação continua aberta por decisão do executor.</p>
           </ReasonModal>
         </>
       )}
@@ -452,7 +452,7 @@ function EffectivenessPanel({ d, onDialog, onRelated }: { d: PlanDetail; onDialo
         {p.effectiveness?.justification && <span className="helper">{p.effectiveness.justification}</span>}
       </div>
       <p className="helper" style={{ marginTop: 8 }}>
-        Eficácia é atributo do plano, separada da execução. Ela não é condição para concluir a ocorrência nesta etapa (DP-10b).
+        Eficácia é atributo do plano, separada da execução. Ela não é condição para concluir a ocorrência.
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
         {d.can.evaluate && (
@@ -525,7 +525,7 @@ function EvaluateModal({ open, d, onClose, onDone }: { open: boolean; d: PlanDet
   return (
     <ActionModal open={open} title="Avaliar eficácia" confirmLabel="Registrar avaliação" onCancel={onClose} onConfirm={async () => { await services.plans.evaluate(access, d.plan.id, { result, justification }); onDone(); }}>
       <SelectField label="Resultado" required options={(Object.keys(EFFECTIVENESS_LABEL) as EffectivenessResult[]).map((r) => ({ value: r, label: EFFECTIVENESS_LABEL[r] }))} value={result} onChange={(e) => setResult(e.target.value as EffectivenessResult)} />
-      <TextArea id="eff-just" label="Justificativa" required={result !== 'eficaz'} value={justification} onChange={setJustification} helper={result === 'eficaz' ? 'Opcional.' : 'Obrigatória. Com Parcial ou Ineficaz, poderá ser criado um plano relacionado (DP-23).'} />
+      <TextArea id="eff-just" label="Justificativa" required={result !== 'eficaz'} value={justification} onChange={setJustification} helper={result === 'eficaz' ? 'Opcional.' : 'Obrigatória. Com Parcial ou Ineficaz, poderá ser criado um plano relacionado.'} />
       {d.evaluationApproverName && <p className="helper">A avaliação passa por aprovação de {d.evaluationApproverName}.</p>}
     </ActionModal>
   );
@@ -541,8 +541,8 @@ function LinkOccurrenceModal({ open, d, onClose, onDone }: { open: boolean; d: P
   return (
     <ActionModal open={open} title="Vincular ocorrência" confirmLabel="Vincular" onCancel={onClose} onConfirm={async () => { await services.plans.linkOccurrence(access, d.plan.id, id, justification); onDone(); }}>
       <SelectField label="Ocorrência" required emptyLabel="Selecione" options={options.map((o) => ({ value: o.id, label: `${o.code} — ${o.typeName} (${OCCURRENCE_STATUS_LABEL[o.status]})` }))} value={id} onChange={(e) => setId(e.target.value)} />
-      <p className="helper">Plano vinculado depois da criação da ocorrência também conta para a exigência de plano do tipo (DP-10a); a elegibilidade de conclusão é recalculada.</p>
-      {chosen?.status === 'concluida' && <TextArea id="link-just" label="Justificativa (ocorrência concluída)" required value={justification} onChange={setJustification} helper="DP-08: sem reabertura nem alteração do histórico original." />}
+      <p className="helper">Plano vinculado depois da criação da ocorrência também conta para a exigência de plano do tipo; a elegibilidade de conclusão é recalculada.</p>
+      {chosen?.status === 'concluida' && <TextArea id="link-just" label="Justificativa (ocorrência concluída)" required value={justification} onChange={setJustification} helper="Sem reabertura nem alteração do histórico original da ocorrência." />}
     </ActionModal>
   );
 }
@@ -588,7 +588,7 @@ function DependencyModal({ open, v, d, onClose, onDone, onCancelAction }: { open
       }}
     >
       <p>
-        A{cancelled[0]?.number} foi cancelada. A ação A{v.action.number} permanece bloqueada até sua decisão (DP-32). Remover ou substituir exige justificativa e fica no histórico.
+        A{cancelled[0]?.number} foi cancelada. A ação A{v.action.number} permanece bloqueada até sua decisão. Remover ou substituir exige justificativa e fica no histórico.
       </p>
       <SelectField label="Decisão" options={[{ value: 'remover', label: 'Remover a dependência' }, { value: 'substituir', label: 'Substituir por outra ação' }]} value={mode} onChange={(e) => setMode(e.target.value as 'remover' | 'substituir')} />
       {mode === 'substituir' && (
@@ -610,7 +610,7 @@ function LinkRequestModal({ open, v, planId, onClose, onDone }: { open: boolean;
   return (
     <ActionModal open={open} title={`Vincular solicitação à ação A${v.action.number}`} confirmLabel="Vincular" onCancel={onClose} onConfirm={async () => { await services.plans.linkRequest(access, planId, v.action.id, id); onDone(); }}>
       <SelectField label="Solicitação de manutenção" required emptyLabel="Selecione" options={options.map((o) => ({ value: o.id, label: `${o.code} — ${o.title}` }))} value={id} onChange={(e) => setId(e.target.value)} />
-      <p className="helper">O resultado, as evidências e o histórico da OS ficam disponíveis na ação. Encerrar a OS não conclui a ação: o executor decide (DP-33).</p>
+      <p className="helper">O resultado, as evidências e o histórico da OS ficam disponíveis na ação. Encerrar a OS não conclui a ação: o executor decide.</p>
       <p className="helper">
         Para abrir uma nova solicitação, use <ContextLink to={maintenancePaths.newRequest()}>Nova solicitação</ContextLink> e depois vincule aqui.
       </p>

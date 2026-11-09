@@ -121,7 +121,7 @@ function PlanForm({ occurrenceId, related }: { occurrenceId?: string; related?: 
         )}
         {related && (
           <Alert tone="info">
-            Continuação do plano <strong>{related.plan.code}</strong> (eficácia {EFFECTIVENESS_LABEL[related.plan.effectiveness!.result!]}). O plano anterior permanece Concluído; a relação fica no histórico dos dois (DP-23).
+            Continuação do plano <strong>{related.plan.code}</strong> (eficácia {EFFECTIVENESS_LABEL[related.plan.effectiveness!.result!]}). O plano anterior permanece Concluído; a relação fica no histórico dos dois.
           </Alert>
         )}
         {related && relatedLink && (
@@ -130,7 +130,7 @@ function PlanForm({ occurrenceId, related }: { occurrenceId?: string; related?: 
               label={`Vincular também à ocorrência ${relatedLink.referenceCode} do plano anterior`}
               checked={copyLink}
               onChange={(e) => setCopyLink(e.target.checked)}
-              description="Sugestão com confirmação: o vínculo passa a contar para a exigência de plano da ocorrência (DP-10a)."
+              description="Sugestão com confirmação: o vínculo passa a contar para a exigência de plano da ocorrência."
             />
             <ProvisionalTag code="P-72">Herança de vínculo provisória</ProvisionalTag>
           </div>
@@ -146,10 +146,10 @@ function PlanForm({ occurrenceId, related }: { occurrenceId?: string; related?: 
         </div>
         {finalApproval && <SelectField label="Aprovador do plano" required emptyLabel="Selecione" options={opts('approve')} value={approver} onChange={(e) => setApprover(e.target.value)} />}
         <SelectField label="Avaliador de eficácia" emptyLabel="Definir depois (obrigatório para concluir)" options={opts('evaluate')} value={evaluator} onChange={(e) => setEvaluator(e.target.value)} />
-        <TextField label="Data prevista da avaliação" type="date" value={evaluationDate} onChange={(e) => setEvaluationDate(e.target.value)} helper="Obrigatória na conclusão do plano (D-013); sem prazo padrão." />
+        <TextField label="Data prevista da avaliação" type="date" value={evaluationDate} onChange={(e) => setEvaluationDate(e.target.value)} helper="Obrigatória na conclusão do plano; sem prazo padrão." />
         <SelectField label="Aprovador da avaliação (opcional)" emptyLabel="Sem aprovação da avaliação" options={opts('approve')} value={evaluationApprover} onChange={(e) => setEvaluationApprover(e.target.value)} />
         {linkOccurrenceId && occurrenceStatus === 'concluida' && (
-          <TextArea id="link-just" label="Justificativa do vínculo (ocorrência concluída)" required value={linkJustification} onChange={setLinkJustification} helper="DP-08: o vínculo não reabre nem altera a ocorrência concluída." />
+          <TextArea id="link-just" label="Justificativa do vínculo (ocorrência concluída)" required value={linkJustification} onChange={setLinkJustification} helper="O vínculo não reabre nem altera a ocorrência concluída." />
         )}
         {!isModuleAvailable(access, 'ocorrencias') && <p className="helper">Sem acesso à Gestão de Ocorrências: o plano é criado sem vínculo.</p>}
         {error && <Alert tone="error">{error}</Alert>}

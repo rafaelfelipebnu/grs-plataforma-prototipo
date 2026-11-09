@@ -429,7 +429,7 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
       await simulateLatency(rt);
       const { request } = loadRequest(ctx, id);
       if (request.requesterUserId !== ctx.user.id || !permissions(ctx).request) throw forbidden('Somente o solicitante edita a solicitação.');
-      if (request.status !== 'aberta') throw conflict('A solicitação já entrou em triagem: a edição está restrita (DP-40).');
+      if (request.status !== 'aberta') throw conflict('A solicitação já entrou em triagem: a edição está restrita.');
       const title = requireText(input.title, 'o título');
       const description = requireText(input.description, 'a descrição');
       const changes: string[] = [];
@@ -450,7 +450,7 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
       await simulateLatency(rt);
       const { request } = loadRequest(ctx, id);
       if (request.requesterUserId !== ctx.user.id || !permissions(ctx).request) throw forbidden('Somente o solicitante cancela a solicitação.');
-      if (request.status !== 'aberta') throw conflict('A solicitação já entrou em triagem: o cancelamento está restrito (DP-40).');
+      if (request.status !== 'aberta') throw conflict('A solicitação já entrou em triagem: o cancelamento está restrito.');
       const text = requireText(reason, 'o motivo do cancelamento');
       mutateRequest(id, (r, draft) => {
         r.status = 'cancelada';
@@ -579,7 +579,7 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
       await simulateLatency(rt);
       const { db, request } = loadRequest(ctx, id);
       requireTriage(ctx);
-      if (!requestItem(db, request).awaitingTriageDecision) throw conflict('A triagem só é retomada quando a OS vinculada foi cancelada (DP-50).');
+      if (!requestItem(db, request).awaitingTriageDecision) throw conflict('A triagem só é retomada quando a OS vinculada foi cancelada.');
       const text = requireText(reason, 'o motivo');
       mutateRequest(id, (r, draft) => {
         const cancelled = draft.workOrders.find((o) => o.id === r.workOrderId);
@@ -710,7 +710,7 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
         e.endedAt = now;
         e.workNotes = notes;
         e.evidences.push(...names.map((name) => ({ id: rt.newId('ev'), name, at: now, byUserId: ctx.user.id })));
-        o.history.push(log(ctx, `Execução concluída pelo técnico${names.length ? ` com ${names.length} evidência(s)` : ''}. A OS continua aberta até o encerramento pelo gestor (DP-47).`));
+        o.history.push(log(ctx, `Execução concluída pelo técnico${names.length ? ` com ${names.length} evidência(s)` : ''}. A OS continua aberta até o encerramento pelo gestor.`));
         audit(draft, ctx, 'os.concluir-execucao', 'os', o.id, `${o.code}: execução concluída`);
       });
     },
@@ -807,7 +807,7 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
       const { order } = loadOrder(ctx, id);
       requireManage(ctx);
       if (order.status !== 'planejada' && order.status !== 'em-execucao') throw conflict('Só é possível suspender OS Planejada ou Em execução.');
-      if (runningExecution(order)) throw conflict('Há execução em andamento: não é possível suspender (DP-48).');
+      if (runningExecution(order)) throw conflict('Há execução em andamento: não é possível suspender.');
       const text = requireText(reason, 'a justificativa da suspensão');
       mutateOrder(id, (o, draft) => {
         o.suspensions.push({ startedAt: rt.now().toISOString(), reason: text, authorizedByUserId: ctx.user.id, previousStatus: o.status as 'planejada' | 'em-execucao' });
@@ -854,7 +854,7 @@ export function createMaintenanceService(rt: ServiceRuntime): MaintenanceService
       const { order } = loadOrder(ctx, id);
       requireManage(ctx);
       if (!CANCELLABLE.includes(order.status)) throw conflict(`OS ${WORK_ORDER_STATUS_LABEL[order.status]} não pode ser cancelada.`);
-      if (runningExecution(order)) throw conflict('Há execução em andamento: conclua-a ou interrompa-a antes de cancelar (DP-51).');
+      if (runningExecution(order)) throw conflict('Há execução em andamento: conclua-a ou interrompa-a antes de cancelar.');
       const text = requireText(reason, 'a justificativa do cancelamento');
       const hadPartialWork = order.executions.length > 0;
       mutateOrder(id, (o, draft) => {

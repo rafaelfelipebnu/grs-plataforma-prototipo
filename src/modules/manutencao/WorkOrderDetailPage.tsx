@@ -217,7 +217,7 @@ function OrderView({ d }: { d: WorkOrderDetail }) {
                 <LabelValue label="Tempo líquido">{formatDuration(d.time.netMs)}</LabelValue>
               </LabelValueGrid>
               <p className="helper" style={{ marginTop: 8 }}>
-                Registro informativo (D-013). Nenhum desconto de SLA é aplicado até a regra de SLA ser definida.
+                Registro informativo. Nenhum desconto de SLA é aplicado até a regra de SLA ser definida.
               </p>
               {o.suspensions.length > 0 && (
                 <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>

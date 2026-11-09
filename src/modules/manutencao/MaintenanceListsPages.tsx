@@ -170,7 +170,7 @@ export function WorkOrdersListPage() {
       <PageHeader
         title="Ordens de serviço"
         breadcrumb={[{ label: MODULES.manutencao.name, to: maintenancePaths.overview }, { label: 'Ordens de serviço' }]}
-        description="Trabalho autorizado e planejado. O técnico conclui a execução; o gestor valida e encerra a OS (DP-47)."
+        description="Trabalho autorizado e planejado. O técnico conclui a execução; o gestor valida e encerra a OS."
       />
       <MaintenanceNav />
       <Panel title={`Ordens de serviço${query.data ? ` (${query.data.total})` : ''}`} flush>

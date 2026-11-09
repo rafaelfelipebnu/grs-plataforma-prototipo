@@ -127,7 +127,7 @@ export function DemoControls({ open, onClose }: { open: boolean; onClose: () => 
             <div style={{ marginTop: 12 }}>
               <Alert tone="warning" title="Composição provisória">
                 A composição deste perfil comercial ainda não foi definida. Os módulos abaixo são uma suposição para a demonstração,
-                registrada em docs/decisoes-evolucao.md.
+                pendente de validação comercial.
               </Alert>
             </div>
           )}

@@ -72,7 +72,7 @@ function PlansList() {
       />
       <Stack>
         <Alert tone="info">
-          Área própria fora dos módulos, como capacidade compartilhada (diretriz D-011). <ProvisionalTag code="P-70">Arquitetura e navegação provisórias</ProvisionalTag>
+          Área própria fora dos módulos, como capacidade compartilhada. <ProvisionalTag code="P-70">Arquitetura e navegação provisórias</ProvisionalTag>
         </Alert>
         <Panel title={`Planos${query.data ? ` (${query.data.total})` : ''}`} flush>
           <div className={t.tableHeading}>

@@ -51,7 +51,7 @@ export function RoutinesHomePage() {
     <>
       <PageHeader
         title={MODULES.rotinas.name}
-        description="Produto existente preservado: planos de rotina, rotinas agendadas e não agendadas, pontos de controle, checklists e execução pelo app, inclusive offline."
+        description="Planos de rotina, rotinas agendadas e não agendadas, pontos de controle, checklists e execução em campo pelo app, inclusive sem conexão."
         actions={
           perm.manage ? (
             <Button variant="secondary" icon="clock-o" loading={busy} onClick={checkMissed}>
@@ -320,13 +320,13 @@ export function CatalogPage() {
   const query = useServiceQuery(() => services.routines.catalog(access), [access]);
   return (
     <>
-      <PageHeader title="Planos de rotina" breadcrumb={[{ label: MODULES.rotinas.name, to: routinePaths.overview }, { label: 'Planos de rotina' }]} description="Plano de rotina, pontos de controle, checklists e rotinas, como no produto atual." />
+      <PageHeader title="Planos de rotina" breadcrumb={[{ label: MODULES.rotinas.name, to: routinePaths.overview }, { label: 'Planos de rotina' }]} description="Plano de rotina, pontos de controle, checklists e rotinas." />
       <RoutinesNav />
       <QueryBoundary query={query} moduleId="rotinas">
         {(items) => (
           <Stack>
             <Alert tone="info">
-              Cadastros em modo consulta nesta entrega. <ProvisionalTag code="P-80">Sem edição de cadastros</ProvisionalTag>
+              Nesta demonstração, os cadastros de Rotinas são apenas consultados. <ProvisionalTag code="P-80">Sem edição de cadastros</ProvisionalTag>
             </Alert>
             {items.map((c) => (
               <Panel key={c.plan.id} title={c.plan.name} collapsible>
@@ -498,7 +498,7 @@ export function ReinspectionsPage() {
         }}
       >
         <p className="helper">
-          O pedido termina sem resultado (D-006e). <ProvisionalTag code="P-86">Gatilho manual provisório</ProvisionalTag>
+          O pedido termina sem resultado. <ProvisionalTag code="P-86">Gatilho manual provisório</ProvisionalTag>
         </p>
       </ReasonModal>
     </>
@@ -523,7 +523,7 @@ function ProgramModal({ v, catalog, onClose, onDone }: { v: ReinspectionView; ca
         onDone(e.code);
       }}
     >
-      <p className="helper">Cria uma rotina não agendada, de execução única, no plano do ponto escolhido (D-013). Nada é criado automaticamente.</p>
+      <p className="helper">Cria uma rotina não agendada, de execução única, no plano do ponto escolhido. Nada é criado automaticamente.</p>
       <SelectField
         label="Ponto de controle"
         required

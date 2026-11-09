@@ -261,8 +261,8 @@ function OverviewSection({ s }: { s: Asset360 }) {
       </Grid>
       <Panel title="Impacto operacional">
         <p className="helper" style={{ marginBottom: 12 }}>
-          Derivado de relacionamentos simples e explicáveis — não se confunde com a criticidade intrínseca. A fórmula consolidada do impacto ainda está
-          em definição (Q-04).
+          Derivado de relacionamentos simples e explicáveis — não se confunde com a criticidade intrínseca. A forma de cálculo do impacto ainda será validada
+          com clientes.
         </p>
         <ImpactSummary s={s} />
       </Panel>

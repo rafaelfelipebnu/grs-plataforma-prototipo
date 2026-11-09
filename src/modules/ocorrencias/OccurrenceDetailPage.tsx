@@ -78,12 +78,12 @@ function DetailView({ d }: { d: OccurrenceDetail }) {
       {openPause && (
         <Alert tone="warning" title="Em pausa">
           Desde {formatDateTime(openPause.startedAt)}. Justificativa: {openPause.reason}. A prioridade não pode ser alterada e a ocorrência não pode ser concluída até ser
-          retomada (DP-03, DP-04a).
+          retomada.
         </Alert>
       )}
       {o.approvalRequest && (
         <Alert tone="info" title="Conclusão aguardando aprovação">
-          Pedida por {d.approvalRequestedByName} em {formatDateTime(o.approvalRequest.at)}. A ocorrência continua Em andamento até a decisão (DP-13).
+          Pedida por {d.approvalRequestedByName} em {formatDateTime(o.approvalRequest.at)}. A ocorrência continua Em andamento até a decisão.
           {d.actions.decideApprovalBlockedReason && <div className="helper">{d.actions.decideApprovalBlockedReason}</div>}
         </Alert>
       )}
@@ -409,7 +409,7 @@ function PlansPanel({ d }: { d: OccurrenceDetail }) {
       )}
       <p className="helper" style={{ marginTop: 8 }}>
         Planos têm ciclo próprio: concluir a ocorrência não conclui nem cancela planos, e concluir um plano não conclui a ocorrência.
-        {o.status === 'concluida' && ' Vincular plano a ocorrência concluída exige justificativa e não reabre a ocorrência (DP-08).'}
+        {o.status === 'concluida' && ' Vincular plano a ocorrência concluída exige justificativa e não reabre a ocorrência.'}
       </p>
     </Panel>
   );

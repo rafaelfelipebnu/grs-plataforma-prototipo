@@ -123,7 +123,7 @@ export function createDemoMaintenance(at: (minutesAgo: number) => ISODateString,
         { at: at(3 * 1440 - 40), actorUserId: 'u-man', text: 'OS criada a partir da solicitação SOL-0004. Prioridade: Média.' },
         { at: at(3 * 1440 - 50), actorUserId: 'u-man', text: `Planejada: técnico André Lima, data prevista ${day(-1).split('-').reverse().join('/')}.` },
         { at: at(26 * 60), actorUserId: 'u-tec', text: 'Execução iniciada. OS em execução.' },
-        { at: at(25 * 60), actorUserId: 'u-tec', text: 'Execução concluída pelo técnico com 1 evidência(s). A OS continua aberta até o encerramento pelo gestor (DP-47).' },
+        { at: at(25 * 60), actorUserId: 'u-tec', text: 'Execução concluída pelo técnico com 1 evidência(s). A OS continua aberta até o encerramento pelo gestor.' },
       ],
     },
     {

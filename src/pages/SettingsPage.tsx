@@ -96,7 +96,7 @@ export function SettingsPage() {
                 ))}
               </ul>
               <p className="helper" style={{ marginTop: 12 }}>
-                Distribuição de permissões provisória, registrada em docs/decisoes-evolucao.md.
+                Distribuição de permissões provisória, pendente de validação com clientes.
               </p>
             </Panel>
           </Col>

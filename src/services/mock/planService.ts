@@ -207,7 +207,7 @@ export function createPlanService(rt: ServiceRuntime): PlanService {
     const open = p.actions.filter((a) => !FINAL_ACTION.includes(a.status));
     if (open.length) out.push(`${open.length} ação(ões) ainda não finalizada(s)`);
     if (!p.actions.some((a) => a.status === 'concluida')) out.push('ao menos uma ação concluída');
-    if (!p.evaluatorUserId || !p.evaluationDueDate) out.push('avaliador e data prevista da avaliação de eficácia (obrigatórios na conclusão — D-013)');
+    if (!p.evaluatorUserId || !p.evaluationDueDate) out.push('avaliador e data prevista da avaliação de eficácia (obrigatórios na conclusão)');
     return out;
   };
 
@@ -333,14 +333,14 @@ export function createPlanService(rt: ServiceRuntime): PlanService {
         if (!occurrence || !inScope(ctx, occurrence.locationId)) errors.push('Ocorrência inválida.');
         else if (!can(ctx, 'ocorrencias.treat')) errors.push('Criar plano vinculado à ocorrência exige a permissão de tratar a ocorrência.');
         else if (occurrence.status === 'concluida' && (input.linkJustification ?? '').trim().length < MIN_TEXT) {
-          errors.push('Ocorrência concluída: informe a justificativa do vínculo (DP-08).');
+          errors.push('Ocorrência concluída: informe a justificativa do vínculo.');
         }
       }
       const previous = input.relatedPlanId ? db.actionPlans.find((p) => p.id === input.relatedPlanId) : undefined;
       if (input.relatedPlanId) {
         const r = previous?.effectiveness?.result;
         if (!previous || previous.effectiveness?.state !== 'avaliada' || (r !== 'parcial' && r !== 'ineficaz')) {
-          errors.push('Plano relacionado só pode ser criado a partir de plano com eficácia Parcial ou Ineficaz (DP-23).');
+          errors.push('Plano relacionado só pode ser criado a partir de plano com eficácia Parcial ou Ineficaz.');
         }
       }
       if (errors.length) throw validation(errors.join(' '));
@@ -548,7 +548,7 @@ export function createPlanService(rt: ServiceRuntime): PlanService {
       const o = db.occurrences.find((x) => x.id === occurrenceId);
       if (!o || !inScope(ctx, o.locationId)) throw validation('Ocorrência inválida.');
       if (plan.links.some((l) => l.targetId === occurrenceId)) throw conflict('A ocorrência já está vinculada a este plano.');
-      if (o.status === 'concluida' && (justification ?? '').trim().length < MIN_TEXT) throw validation('Ocorrência concluída: informe a justificativa do vínculo (DP-08).');
+      if (o.status === 'concluida' && (justification ?? '').trim().length < MIN_TEXT) throw validation('Ocorrência concluída: informe a justificativa do vínculo.');
       mutate(ctx, planId, 'vincular', (p, draft) => {
         const now = rt.now().toISOString();
         p.links.push({ kind: 'ocorrencia', targetId: o.id, linkedAt: now, linkedByUserId: ctx.user.id, justification: justification?.trim() || undefined });
@@ -608,7 +608,7 @@ export function createPlanService(rt: ServiceRuntime): PlanService {
         if (dependents.length) {
           notify(draft, p, `Dependência cancelada no plano ${p.code}`, `A${a.number} foi cancelada; ${dependents.map((d) => `A${d.number}`).join(', ')} aguarda(m) decisão.`, [p.responsibleUserId], ctx.user.id);
         }
-        return `Ação A${a.number} cancelada. Justificativa: ${text}${dependents.length ? ` — ${dependents.map((d) => `A${d.number}`).join(', ')} fica(m) bloqueada(s) até decisão (DP-32).` : ''}`;
+        return `Ação A${a.number} cancelada. Justificativa: ${text}${dependents.length ? ` — ${dependents.map((d) => `A${d.number}`).join(', ')} fica(m) bloqueada(s) até decisão.` : ''}`;
       });
     },
 
@@ -661,7 +661,7 @@ export function createPlanService(rt: ServiceRuntime): PlanService {
       mutate(ctx, planId, 'acao-solicitacao', (p) => {
         const a = p.actions.find((x) => x.id === actionId)!;
         a.linkedRequestId = request.id;
-        return `Ação A${a.number} passa a referenciar a solicitação ${request.code}. O resultado da OS fica disponível na ação; encerrar a OS não conclui a ação (DP-33).`;
+        return `Ação A${a.number} passa a referenciar a solicitação ${request.code}. O resultado da OS fica disponível na ação; encerrar a OS não conclui a ação.`;
       });
     },
 

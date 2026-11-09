@@ -12,8 +12,6 @@ export interface ModuleDefinition {
   responsibilities: string[];
   /** Explicação de valor para quando o módulo não está contratado (sem dados operacionais). */
   valueProposition: string;
-  /** Etapa do protótipo em que o módulo será implementado (CLAUDE.md, "Ordem de construção"). */
-  buildStage: number;
 }
 
 /**
@@ -35,7 +33,6 @@ export const MODULES: Record<ModuleId, ModuleDefinition> = {
     ],
     valueProposition:
       'Reúne em uma única visão os eventos de segurança e os sinais de outros módulos que afetam a segurança, apoiando decisões e ações — não apenas a exibição de indicadores.',
-    buildStage: 2,
   },
   central: {
     id: 'central',
@@ -51,7 +48,6 @@ export const MODULES: Record<ModuleId, ModuleDefinition> = {
     ],
     valueProposition:
       'Um cadastro único de ativos, dispositivos e locais compartilhado por todos os módulos, evitando cadastros duplicados e dando contexto de localização, criticidade e impacto.',
-    buildStage: 3,
   },
   monitor: {
     id: 'monitor',
@@ -67,7 +63,6 @@ export const MODULES: Record<ModuleId, ModuleDefinition> = {
     ],
     valueProposition:
       'Conecta dispositivos por conectores de protocolo (BACnet, Modbus, MQTT, ONVIF, SNMP), coleta telemetria e acompanha a saúde e a conectividade da infraestrutura.',
-    buildStage: 4,
   },
   rotinas: {
     id: 'rotinas',
@@ -83,7 +78,6 @@ export const MODULES: Record<ModuleId, ModuleDefinition> = {
     ],
     valueProposition:
       'Organiza inspeções e rondas com checklists e pontos de controle, executados em campo pelo aplicativo — inclusive sem conexão — com evidências e registro de não conformidades.',
-    buildStage: 5,
   },
   manutencao: {
     id: 'manutencao',
@@ -99,7 +93,6 @@ export const MODULES: Record<ModuleId, ModuleDefinition> = {
     ],
     valueProposition:
       'Separa solicitação, ordem de serviço e execução, com triagem, aprovações e histórico sobre a mesma base de ativos usada pelos demais módulos.',
-    buildStage: 5,
   },
   ocorrencias: {
     id: 'ocorrencias',
@@ -115,7 +108,6 @@ export const MODULES: Record<ModuleId, ModuleDefinition> = {
     ],
     valueProposition:
       'Trata ocorrências do registro ao encerramento, com planos de ação, evidências, reinspeção e verificação de eficácia.',
-    buildStage: 5,
   },
   riscos: {
     id: 'riscos',
@@ -126,7 +118,6 @@ export const MODULES: Record<ModuleId, ModuleDefinition> = {
     responsibilities: ['Avaliação estruturada de riscos', 'Controles associados'],
     valueProposition:
       'Avaliação estruturada de riscos e controles, retroalimentada pelos eventos, ocorrências e evidências da operação.',
-    buildStage: 6,
   },
 };
 

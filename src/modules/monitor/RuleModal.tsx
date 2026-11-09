@@ -78,7 +78,7 @@ export function RuleModal({ open, onClose, rule, pointId }: RuleModalProps) {
         options={SEVERITIES.map((s) => ({ value: s, label: SEVERITY_LABEL[s] }))}
       />
       <p className="helper">
-        A regra é avaliada a cada leitura; um alerta ativo por regra. Histerese, janelas, supressão e escalonamento ainda estão em definição.
+        A regra é avaliada a cada leitura; um alerta ativo por regra. Histerese, janelas de tempo, supressão e escalonamento não fazem parte desta demonstração.
       </p>
     </ReasonModal>
   );

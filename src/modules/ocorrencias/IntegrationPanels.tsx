@@ -45,7 +45,7 @@ export function ReinspectionPanel({ d }: { d: OccurrenceDetail }) {
       )}
       <p className="helper" style={{ marginTop: 8 }}>
         A reinspeção é programada pelo gestor de Rotinas como rotina não agendada de execução única. OK = nenhuma resposta Não Conforme (critério existente). Resultado OK habilita
-        "Concluir", mas não conclui automaticamente (DP-12).
+        "Concluir", mas não conclui automaticamente.
       </p>
       <ActionModal
         open={open}

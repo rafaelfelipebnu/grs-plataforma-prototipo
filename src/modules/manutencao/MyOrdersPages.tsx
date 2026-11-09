@@ -19,7 +19,7 @@ function MobileBanner() {
     <div className={s.mobileBanner} role="note">
       <Icon name="mobile" />
       <span>
-        Visão móvel demonstrativa da execução de OS. Requer conexão: o modo offline de OS é evolução futura.
+        Visão móvel demonstrativa da execução de OS. Requer conexão com a internet.
       </span>
     </div>
   );

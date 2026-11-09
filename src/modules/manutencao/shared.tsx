@@ -98,7 +98,7 @@ export function ExecutionStatusBadge({ value }: { value: ExecutionStatus }) {
 
 export function PriorityBadge({ value }: { value: MaintenancePriority }) {
   return (
-    <Badge tone={PRIORITY_TONE[value]} title="Escala provisória (P-49, DP-39 em validação)">
+    <Badge tone={PRIORITY_TONE[value]} title="Escala provisória (P-49), pendente de validação">
       {MAINTENANCE_PRIORITY_LABEL[value]}
     </Badge>
   );
@@ -107,7 +107,7 @@ export function PriorityBadge({ value }: { value: MaintenancePriority }) {
 /** Marca na interface um comportamento provisório ou hipótese ainda não aprovada (P-xx). */
 export function ProvisionalTag({ code, children = 'Provisório' }: { code: string; children?: ReactNode }) {
   return (
-    <span className={styles.provisional} title={`Comportamento provisório registrado como ${code} em docs/decisoes-evolucao.md — pendente de validação.`}>
+    <span className={styles.provisional} title={`Comportamento provisório (${code}), pendente de validação com clientes.`}>
       <Icon name="flask" />
       {children} · {code}
     </span>

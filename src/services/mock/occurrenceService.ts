@@ -319,7 +319,7 @@ export function recordReinspectionResult(
     kind: 'automatico',
     text: `Resultado da reinspeção ${info.executionCode}: ${info.result === 'ok' ? 'OK' : 'Não OK'} — executor ${info.executorName}, ${info.evidences} evidência(s)${
       info.newOccurrenceCode ? `; a não conformidade gerou a ocorrência ${info.newOccurrenceCode} (com sugestão de vínculo)` : ''
-    }${o.status === 'concluida' ? '. Registrado após a conclusão, sem reabertura (DP-15)' : ''}.`,
+    }${o.status === 'concluida' ? '. Registrado após a conclusão, sem reabertura' : ''}.`,
   });
   pushNotification(
     rt,
@@ -474,13 +474,13 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
   /** Valida a conclusão; devolve o motivo de impedimento ou null. */
   const blockReason = (db: Readonly<DemoDatabase>, o: Occurrence, t: OccurrenceType, input: ConclusionInput | null): string | null => {
     if (o.status === 'concluida') return 'já concluída';
-    if (o.status === 'em-pausa') return 'em pausa: retome antes de concluir (DP-04a)';
+    if (o.status === 'em-pausa') return 'em pausa: retome antes de concluir';
     if (o.status === 'sem-tratamento' || o.proceedings.length === 0) return 'sem trâmite registrado';
     const plan = planRequirementMet(t, linkedPlans(db, o.id));
     if (plan && !plan.met) return `o tipo ${t.conclusion.requirePlan === 'exige-iniciado' ? 'exige plano de ação iniciado' : 'exige planos de ação concluídos'}: ${plan.detail}`;
     if (t.conclusion.requireReinspection) {
       const rs = reinspectionState(reinspectionsOf(db, o.id));
-      if (rs.pending) return 'o tipo exige reinspeção: há reinspeção solicitada aguardando resultado (DP-09)';
+      if (rs.pending) return 'o tipo exige reinspeção: há reinspeção solicitada aguardando resultado';
       if (rs.last?.result !== 'ok') return 'o tipo exige reinspeção com último resultado OK';
     }
     if (t.conclusion.criterion === 'aprovacao') return 'o tipo exige aprovação da conclusão';
@@ -701,7 +701,7 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
       await simulateLatency(rt);
       const { occurrence } = load(ctx, id);
       requirePerm(ctx, 'treat', 'Seu perfil não trata ocorrências.');
-      if (occurrence.status === 'em-pausa') throw conflict('Em pausa a prioridade não pode ser alterada: retome antes (DP-03).');
+      if (occurrence.status === 'em-pausa') throw conflict('Em pausa a prioridade não pode ser alterada: retome antes.');
       if (occurrence.status === 'concluida') throw conflict('Ocorrência concluída.');
       if (occurrence.priority === priority) throw validation('Selecione uma prioridade diferente da atual.');
       mutate(id, (o, draft) => {
@@ -723,7 +723,7 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
         o.history.push(entry(ctx.user.id, 'acao', `Ocorrência pausada. Justificativa: ${text}`));
         if (o.approvalRequest) {
           o.approvalRequest = undefined;
-          o.history.push(entry('sistema', 'automatico', 'Pedido de aprovação de conclusão cancelado pela pausa: será preciso pedir de novo após retomar (DP-13).'));
+          o.history.push(entry('sistema', 'automatico', 'Pedido de aprovação de conclusão cancelado pela pausa: será preciso pedir de novo após retomar.'));
         }
         audit(draft, ctx, 'ocorrencia.pausar', o, 'pausada');
       });
@@ -836,7 +836,7 @@ export function createOccurrenceService(rt: ServiceRuntime): OccurrenceService {
       requirePerm(ctx, 'exception', 'Seu perfil não autoriza exceção de conclusão.');
       const check = checkOf(rt.store.getSnapshot(), occurrence, type);
       // A exceção não dispensa a DP-04a nem a regra atual do produto (D-013).
-      if (occurrence.status === 'em-pausa') throw conflict('Em pausa: retome antes de concluir. A exceção não dispensa a DP-04a.');
+      if (occurrence.status === 'em-pausa') throw conflict('Em pausa: retome antes de concluir. A conclusão com exceção também exige a retomada.');
       if (!check.baseMet) throw conflict('A exceção só dispensa condições do tipo: a ocorrência precisa estar Em andamento, com ao menos um trâmite.');
       if (!hasTypeConditions(type)) throw conflict('O tipo não tem condições configuradas: conclua normalmente.');
       const text = requireText(justification, 'a justificativa da exceção');
