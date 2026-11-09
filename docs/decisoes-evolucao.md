@@ -417,6 +417,18 @@ Hipóteses adotadas **só para demonstrar o fluxo**; não são decisões aprovad
 | P-88 | Score | Percentual de checklists conformes por ponto × checklist respondido. "Não se aplica" e texto não contam como não conformidade. | Referência 1.11 | `score` em `routineService.ts` |
 | P-89 | Programação da reinspeção | Pontos sugeridos: os da execução de origem com não conformidade e os do mesmo ativo/local da ocorrência. Checklist sugerido: o indicado no pedido. O gestor escolhe o plano pelo ponto. | D-006a/b (D-013) | `reinspections`, `ProgramModal` |
 
+## Comportamentos provisórios (coesão da plataforma, após a auditoria de 09/11/2026) — a validar
+
+Hipóteses adotadas **só para demonstrar a experiência integrada**; não são decisões aprovadas e não alteram D-001 a D-013. Princípio aplicado: cada módulo informa o que é seu, com as próprias regras de permissão e escopo; Security Hub, Central e busca só consultam e levam ao módulo dono. D-005c, D-006 e Q-04 seguem em aberto.
+
+| # | Tema | Comportamento provisório (hipótese) | Base | Onde alterar |
+|---|------|--------------------------|------|--------------|
+| P-90 | Registros originados do evento | O detalhe do evento lista ocorrências e solicitações criadas a partir dele e avisa sobre registros em aberto do mesmo ativo. Não bloqueia novo registro, não deduplica e não associa solicitação a ocorrência (D-005c em aberto). Solicitação aberta do evento recebe origem "Evento" e pode ser aberta para evento sem ativo. | Auditoria A1; docs/08 Cenário A | `EventPage.tsx`, `LinkedRecords.tsx`, `linkedRecords` em Ocorrências e Manutenção |
+| P-91 | Ações pendentes no Hub | Reúne reconhecimentos e: ocorrência sem tratamento, decisão de aprovação, sugestão de vínculo; triagem, encerramento, impedimento e execução de OS; aprovação, eficácia, dependência cancelada e execução de ação de plano; reinspeção a programar. Ordenação por severidade (prioridade mapeada para a escala do Hub) e antiguidade. | docs/03 (widget Ações pendentes) | `pendingWork` nos serviços; `PendingActionsWidget` |
+| P-92 | Widgets de Manutenção e Rotinas | "Manutenções em andamento": OS ativas em ativos relevantes para segurança (sistemas de segurança e seus ativos de dependência). "Inspeções e rotinas pendentes": pendentes, em execução, não realizadas nas últimas 24 h e reinspeções a programar. | docs/03 (catálogo) | `hubSummary` em Manutenção e Rotinas |
+| P-93 | Painel padrão do cliente | Área "Ações" passa a incluir Ocorrências abertas, Manutenções em andamento e Inspeções e rotinas pendentes. | Auditoria A2 | `data/seed/dashboard.ts` |
+| P-94 | Histórico consolidado do ativo | O histórico do painel 360º soma o histórico próprio de solicitações, OS e ocorrências do ativo e as execuções que passaram por ponto de controle do ativo, com link para o registro. Nada é copiado para a Central. | docs/02 (painel 360º); auditoria B1 | `assetTimeline` nos serviços; `Asset360Page.tsx` |
+
 ## Dúvidas em aberto
 
 Não bloqueiam a etapa 1. Precisam de definição antes das etapas indicadas.

@@ -20,9 +20,9 @@ export function createDefaultDashboard(at: ISODateString): DashboardLayout {
       { id: 'w-situacao', type: 'situacao-por-localizacao', area: 'mapa', size: 4, config: { refresh: 'tempo-real' } },
       { id: 'w-acoes', type: 'acoes-pendentes', area: 'acoes', size: 6, config: { limit: 6, refresh: 'tempo-real' } },
       { id: 'w-ocorrencias', type: 'ocorrencias-abertas', area: 'acoes', size: 6, config: { limit: 5 } },
-      { id: 'w-manutencoes', type: 'manutencoes-andamento', area: 'acoes', size: 4, config: { limit: 4 } },
-      { id: 'w-rotinas', type: 'inspecoes-rotinas-pendentes', area: 'acoes', size: 4, config: { limit: 3 } },
-      { id: 'w-ativos', type: 'ativos-criticos', area: 'acoes', size: 4, config: { minCriticality: 'alta', limit: 6, refresh: 'tempo-real' } },
+      { id: 'w-manutencoes', type: 'manutencoes-andamento', area: 'acoes', size: 6, config: { limit: 4 } },
+      { id: 'w-rotinas', type: 'inspecoes-rotinas-pendentes', area: 'acoes', size: 6, config: { limit: 3 } },
+      { id: 'w-ativos', type: 'ativos-criticos', area: 'acoes', size: 6, config: { minCriticality: 'alta', limit: 6, refresh: 'tempo-real' } },
     ],
   };
 }
