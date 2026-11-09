@@ -34,11 +34,11 @@ describe('dashboard do Security Hub', () => {
     const user = userEvent.setup();
     const { bundle } = renderApp({ path: '/security-hub', userId: 'u-seg' });
     const actions = await widget('Ações pendentes');
-    await within(actions).findByText(/Reconhecer: Porta de emergência aberta/);
-    const row = within(actions).getByText(/Reconhecer: Porta de emergência aberta/).closest('li')!;
+    const title = await within(actions).findByText('Alarme de intrusão — Docas de Expedição');
+    const row = title.closest('li')!;
     await user.click(within(row as HTMLElement).getByRole('button', { name: 'Reconhecer' }));
-    await waitFor(() => expect(bundle.store.getSnapshot().events.find((e) => e.id === 'ev-002')?.status).toBe('reconhecido'));
-    await waitFor(() => expect(within(actions).queryByText(/Reconhecer: Porta de emergência aberta/)).not.toBeInTheDocument());
+    await waitFor(() => expect(bundle.store.getSnapshot().events.find((e) => e.id === 'ev-001')?.status).toBe('reconhecido'));
+    await waitFor(() => expect(within(actions).queryByText('Alarme de intrusão — Docas de Expedição')).not.toBeInTheDocument());
   });
 
   it('personaliza: adiciona widget do catálogo, salva e passa a usar o painel pessoal', async () => {
@@ -102,7 +102,7 @@ describe('dashboard do Security Hub', () => {
     expect(screen.queryByRole('button', { name: 'Editar padrão do cliente' })).not.toBeInTheDocument();
   });
 
-  it('widget de módulo não contratado aparece bloqueado; de módulo futuro, sinaliza a etapa', async () => {
+  it('widget de módulo não contratado aparece bloqueado; os demais consultam o módulo de origem', async () => {
     const { bundle } = renderApp({ path: '/security-hub', userId: 'u-seg' });
     const ctx = bundle.services.session.resolveAccessContext('u-seg')!;
     await act(async () => {
@@ -112,7 +112,20 @@ describe('dashboard do Security Hub', () => {
     const health = await widget('Saúde da infraestrutura');
     expect(within(health).getByText('Monitor de Infraestrutura não contratado')).toBeInTheDocument();
     const routines = await widget('Inspeções e rotinas pendentes');
-    expect(within(routines).getByText('Disponível na etapa 5')).toBeInTheDocument();
+    expect(await within(routines).findByText(/EX-0001/)).toBeInTheDocument();
+    expect(within(routines).queryByText(/etapa/i)).not.toBeInTheDocument();
+  });
+
+  it('painel padrão integra ocorrências, manutenção, rotinas e ações pendentes dos módulos', async () => {
+    renderApp({ path: '/security-hub', userId: 'u-seg' });
+    const occurrences = await widget('Ocorrências abertas');
+    expect(await within(occurrences).findAllByText(/^OC-\d{4} — /)).not.toHaveLength(0);
+    const maintenance = await widget('Manutenções em andamento');
+    expect(await within(maintenance).findByText(/OS-0002/)).toBeInTheDocument();
+    const pending = await widget('Ações pendentes');
+    // Reconhecimento (Hub) e avaliação de eficácia do PA-0002 (Planos de ação) para a Helena.
+    expect(await within(pending).findAllByText('Reconhecer alerta')).not.toHaveLength(0);
+    expect(within(pending).queryByText(/etapa/i)).not.toBeInTheDocument();
   });
 });
 

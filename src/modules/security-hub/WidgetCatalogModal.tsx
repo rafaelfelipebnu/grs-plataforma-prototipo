@@ -64,7 +64,6 @@ export function WidgetCatalogModal({ open, onClose, current, onAdd }: Props) {
                   <div className={styles.catalogBadges}>
                     {count > 0 && <Badge tone="blue">{count === 1 ? 'Já no painel' : `${count} no painel`}</Badge>}
                     {locked && <Badge tone="yellow" icon="lock">{MODULES[locked.m].name} não contratado</Badge>}
-                    {!def.implemented && <Badge tone="gray">Dados na etapa {def.pendingStage}</Badge>}
                     {noPermission && <Badge tone="gray">Sem permissão no seu perfil</Badge>}
                   </div>
                 </div>

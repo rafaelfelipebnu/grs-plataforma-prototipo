@@ -2,7 +2,8 @@ import type { ComponentType } from 'react';
 import type { WidgetTypeId } from '@/domain';
 import type { WidgetProps } from './WidgetCard';
 import { CriticalAssetsWidget, InfraHealthWidget, LocationStatusWidget, MapWidget } from './OperationWidgets';
-import { IndicatorsWidget, PendingActionsWidget, PendingModuleWidget, ResponseTimeWidget } from './ManagementWidgets';
+import { IndicatorsWidget, PendingActionsWidget, ResponseTimeWidget } from './ManagementWidgets';
+import { MaintenanceInProgressWidget, RoutinesPendingWidget } from './IntegrationWidgets';
 import { OccurrencesByStatusWidget, OpenOccurrencesWidget } from './OccurrenceWidgets';
 import { AccessLiveWidget, AlarmsWidget, CamerasWidget, EventsWidget, HistoryWidget, TelemetryAlertsWidget } from './SecurityWidgets';
 
@@ -17,8 +18,8 @@ export const WIDGET_COMPONENTS: Record<WidgetTypeId, ComponentType<WidgetProps>>
   'ativos-criticos': CriticalAssetsWidget,
   'saude-infraestrutura': InfraHealthWidget,
   'alertas-telemetria': TelemetryAlertsWidget,
-  'manutencoes-andamento': PendingModuleWidget,
-  'inspecoes-rotinas-pendentes': PendingModuleWidget,
+  'manutencoes-andamento': MaintenanceInProgressWidget,
+  'inspecoes-rotinas-pendentes': RoutinesPendingWidget,
   'indicadores-seguranca': IndicatorsWidget,
   'ocorrencias-por-status': OccurrencesByStatusWidget,
   'acoes-pendentes': PendingActionsWidget,

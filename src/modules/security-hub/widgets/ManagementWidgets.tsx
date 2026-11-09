@@ -1,14 +1,13 @@
-import { Alert, Button, EmptyState, Icon, StatsCard } from '@/components/ui';
-import { SEVERITY_COLOR, SEVERITY_LABEL } from '@/components/domain';
-import { moduleAccess } from '@/access';
-import { PERIOD_SHORT_LABEL } from '@/domain';
+import { Button, EmptyState, StatsCard } from '@/components/ui';
+import { SEVERITY_COLOR, SEVERITY_LABEL, formatDateTime } from '@/components/domain';
+import { isModuleAvailable } from '@/access';
+import { PERIOD_SHORT_LABEL, type Severity } from '@/domain';
 import { MODULES } from '@/modules/registry';
 import { useAccess } from '@/app/providers/SessionProvider';
 import { useServices } from '@/app/providers/ServicesProvider';
 import { useServiceQuery } from '@/app/providers/useServiceQuery';
 import { ContextLink } from '@/app/navigation/contextNavigation';
-import { paths } from '@/app/navigation/targets';
-import { WIDGET_CATALOG } from '../catalog';
+import { paths, resolveTargetPath } from '@/app/navigation/targets';
 import { hubPaths } from '../hubPaths';
 import { WidgetCard, WidgetQueryBody, useWidgetLocation, type WidgetProps } from './WidgetCard';
 import { useAcknowledge } from './useAcknowledge';
@@ -79,7 +78,7 @@ export function ResponseTimeWidget({ instance }: WidgetProps) {
               <div>
                 <div className={styles.bigNumber}>{formatMinutes(r.averageMinutes)}</div>
                 <div className="helper">
-                  Média entre ocorrência e reconhecimento · {r.acknowledgedCount} {r.acknowledgedCount === 1 ? 'alerta' : 'alertas'}
+                  Média entre o evento e o reconhecimento · {r.acknowledgedCount} {r.acknowledgedCount === 1 ? 'alerta' : 'alertas'}
                 </div>
               </div>
               <ul className={styles.rows} aria-label="Tempo médio por severidade">
@@ -106,83 +105,114 @@ export function ResponseTimeWidget({ instance }: WidgetProps) {
   );
 }
 
+interface PendingRow {
+  key: string;
+  severity: Severity;
+  since: string;
+  sourceLabel: string;
+  action: string;
+  title: string;
+  to: string | null;
+  meta: string;
+  acknowledgeEventId?: string;
+}
+
+const SEVERITY_ORDER: Record<Severity, number> = { critica: 4, alta: 3, media: 2, baixa: 1, informativa: 0 };
+
+/**
+ * Ações pendentes do usuário em toda a plataforma: reconhecimentos do Security
+ * Hub e o que cada módulo especialista informa (triagem, tratamento, eficácia,
+ * reinspeção…), conforme as permissões do perfil. O Hub só reúne e leva ao
+ * módulo responsável; nenhuma ação de outro módulo é executada aqui.
+ */
 export function PendingActionsWidget({ instance }: WidgetProps) {
   const { config } = instance;
   const access = useAccess();
   const services = useServices();
   const location = useWidgetLocation(config);
   const { acknowledge, pending } = useAcknowledge();
-  const query = useServiceQuery(() => services.hub.pendingActions(access, { locationId: location.locationId, limit: config.limit ?? 6 }), [access, location.locationId, config.limit], {
-    refresh: config.refresh,
-  });
+  const limit = config.limit ?? 6;
+  const query = useServiceQuery(
+    async () => {
+      const filter = { locationId: location.locationId };
+      const [acks, ...modules] = await Promise.all([
+        services.hub.pendingActions(access, { ...filter, limit: 50 }),
+        isModuleAvailable(access, 'ocorrencias') ? services.occurrences.pendingWork(access, filter) : Promise.resolve([]),
+        isModuleAvailable(access, 'manutencao') ? services.maintenance.pendingWork(access, filter) : Promise.resolve([]),
+        services.plans.permissions(access).view ? services.plans.pendingWork(access, filter) : Promise.resolve([]),
+        isModuleAvailable(access, 'rotinas') ? services.routines.pendingWork(access, filter) : Promise.resolve([]),
+      ]);
+      const rows: PendingRow[] = [
+        ...acks.map((a) => ({
+          key: `ack-${a.event.id}`,
+          severity: a.event.severity,
+          since: new Date(Date.now() - a.ageMinutes * 60_000).toISOString(),
+          sourceLabel: MODULES['security-hub'].name,
+          action: 'Reconhecer alerta',
+          title: a.event.title,
+          to: paths.event(a.event.id),
+          meta: `Aguardando há ${formatMinutes(a.ageMinutes)} · ${tail(a.locationPath)}`,
+          acknowledgeEventId: a.event.id,
+        })),
+        ...modules.flat().map((w) => ({
+          key: w.id,
+          severity: w.severity,
+          since: w.since,
+          sourceLabel: w.target.kind === 'action-plan' ? 'Planos de ação' : MODULES[w.moduleId].name,
+          action: w.action,
+          title: w.title,
+          to: resolveTargetPath(w.target, access, services),
+          meta: `Desde ${formatDateTime(w.since)}${w.locationPath.length ? ` · ${tail(w.locationPath)}` : ''}`,
+        })),
+      ];
+      return rows.sort((a, b) => SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity] || a.since.localeCompare(b.since));
+    },
+    [access, location.locationId],
+    { refresh: config.refresh },
+  );
   const canAck = access.permissions.has('hub.events.acknowledge');
   return (
-    <WidgetCard instance={instance} location={location} query={query} flush drillTo={hubPaths.events({ status: 'ativo', local: location.locationId, ordem: 'severidade' })}>
+    <WidgetCard instance={instance} location={location} query={query} flush>
       <WidgetQueryBody query={query}>
-        {(actions) => (
-          <>
-            {actions.length === 0 ? (
-              <EmptyState compact icon="check-circle" title="Nenhuma ação pendente." />
-            ) : (
+        {(rows) =>
+          rows.length === 0 ? (
+            <EmptyState compact icon="check-circle" title="Nenhuma ação pendente para você." />
+          ) : (
+            <>
               <ul className={styles.rows}>
-                {actions.map((a) => (
-                  <li key={a.event.id} className={styles.row}>
-                    <span className={styles.severityDot} style={{ background: SEVERITY_COLOR[a.event.severity] }} title={`Severidade ${SEVERITY_LABEL[a.event.severity].toLowerCase()}`} />
+                {rows.slice(0, limit).map((r) => (
+                  <li key={r.key} className={styles.row}>
+                    <span className={styles.severityDot} style={{ background: SEVERITY_COLOR[r.severity] }} title={`Severidade ${SEVERITY_LABEL[r.severity].toLowerCase()}`} />
                     <div className={styles.rowMain}>
-                      <ContextLink to={paths.event(a.event.id)} className={styles.rowTitle}>
-                        Reconhecer: {a.event.title}
-                      </ContextLink>
                       <div className={styles.rowMeta}>
-                        Aguardando há {formatMinutes(a.ageMinutes)} · {tail(a.locationPath)}
+                        {r.sourceLabel} · <strong>{r.action}</strong>
                       </div>
+                      {r.to ? (
+                        <ContextLink to={r.to} className={styles.rowTitle}>
+                          {r.title}
+                        </ContextLink>
+                      ) : (
+                        <span className={styles.rowTitle}>{r.title}</span>
+                      )}
+                      <div className={styles.rowMeta}>{r.meta}</div>
                     </div>
-                    {canAck && (
-                      <Button size="small" variant="secondary" icon="check" loading={pending === a.event.id} onClick={() => acknowledge(a.event.id, a.event.title)}>
+                    {r.acknowledgeEventId && canAck && (
+                      <Button size="small" variant="secondary" icon="check" loading={pending === r.acknowledgeEventId} onClick={() => acknowledge(r.acknowledgeEventId!, r.title)}>
                         Reconhecer
                       </Button>
                     )}
                   </li>
                 ))}
               </ul>
-            )}
-            <p className="helper" style={{ padding: '8px 16px' }}>
-              <Icon name="info-circle" /> Ações de ocorrências, manutenção e rotinas entram aqui quando esses módulos forem implementados (etapa 5).
-            </p>
-          </>
-        )}
-      </WidgetQueryBody>
-    </WidgetCard>
-  );
-}
-
-/**
- * Widgets cujos dados pertencem a módulos ainda não implementados no
- * protótipo: mostram o estado real (bloqueado ou previsto), sem dados fictícios.
- */
-export function PendingModuleWidget({ instance }: WidgetProps) {
-  const access = useAccess();
-  const def = WIDGET_CATALOG[instance.type];
-  const sourceModule = def.requiredModules.find((m) => m !== 'security-hub') ?? 'security-hub';
-  const state = moduleAccess(access, sourceModule);
-  return (
-    <WidgetCard instance={instance}>
-      {state === 'not-contracted' ? (
-        <EmptyState
-          compact
-          icon="lock"
-          title={`${MODULES[sourceModule].name} não contratado`}
-          text={
-            <>
-              {MODULES[sourceModule].valueProposition}{' '}
-              <ContextLink to={MODULES[sourceModule].basePath}>Saiba mais</ContextLink>
+              {rows.length > limit && (
+                <p className="helper" style={{ padding: '8px 16px' }}>
+                  Mais {rows.length - limit} {rows.length - limit === 1 ? 'ação pendente' : 'ações pendentes'}. Aumente o limite nas configurações do widget ou abra os módulos.
+                </p>
+              )}
             </>
-          }
-        />
-      ) : (
-        <Alert tone="info" title={`Disponível na etapa ${def.pendingStage}`}>
-          Os dados deste widget vêm de {MODULES[sourceModule].name}, que será implementado na etapa {def.pendingStage} do protótipo.
-        </Alert>
-      )}
+          )
+        }
+      </WidgetQueryBody>
     </WidgetCard>
   );
 }

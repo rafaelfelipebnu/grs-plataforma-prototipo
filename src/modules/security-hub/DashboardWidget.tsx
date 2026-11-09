@@ -106,7 +106,7 @@ export function DashboardWidget({ instance, editing, isFirst, isLast, handlers }
         <EmptyState compact icon="eye-slash" title="Oculto para o seu perfil" text="Usuários sem permissão no módulo de origem não veem este widget." />
       </WidgetCard>
     );
-  } else if (locked && def.implemented) {
+  } else if (locked) {
     body = (
       <WidgetCard instance={instance}>
         <EmptyState
